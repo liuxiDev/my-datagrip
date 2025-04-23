@@ -38,6 +38,19 @@ public class MainFrame extends JFrame {
     private ConnectionConfig currentConnection;
     private QueryResultTableModel resultTableModel;
     
+    // 添加分页相关的字段
+    private JPanel paginationPanel;
+    private JTextField pageField;
+    private JTextField pageSizeField;
+    private JButton prevPageButton;
+    private JButton nextPageButton;
+    private JLabel totalPagesLabel;
+    private int currentPage = 1;
+    private int pageSize = 500;
+    private int totalPages = 1;
+    private int totalRecords = 0;
+    private String currentTableName;
+    
     public MainFrame() {
         initComponents();
         setupListeners();
@@ -65,6 +78,9 @@ public class MainFrame extends JFrame {
         sqlTextArea = new JTextArea();
         sqlTextArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
         
+        // 创建分页控制面板
+        paginationPanel = createPaginationPanel();
+        
         resultTableModel = new QueryResultTableModel();
         resultTable = new JTable(resultTableModel);
         resultTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
@@ -85,6 +101,9 @@ public class MainFrame extends JFrame {
         JPanel sqlPanel = new JPanel(new BorderLayout());
         sqlPanel.add(new JLabel("SQL查询:"), BorderLayout.NORTH);
         sqlPanel.add(sqlScrollPane, BorderLayout.CENTER);
+        
+        // 添加分页面板到SQL面板底部
+        sqlPanel.add(paginationPanel, BorderLayout.SOUTH);
         
         JPanel resultPanel = new JPanel(new BorderLayout());
         resultPanel.add(new JLabel("查询结果:"), BorderLayout.NORTH);
@@ -297,7 +316,7 @@ public class MainFrame extends JFrame {
             }
         });
         
-        // 添加树的鼠标监听器
+        // 修改树的鼠标监听器
         databaseTree.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -311,11 +330,39 @@ public class MainFrame extends JFrame {
                         // 双击连接节点，连接数据库并展开
                         connectDatabase((ConnectionConfig)userObject);
                     } else if (userObject instanceof String && node.getParent() != null) {
-                        // 双击表节点，显示表结构
+                        // 双击表节点，执行默认查询而不是显示表结构
                         if (node.isLeaf()) {
                             String tableName = (String)userObject;
-                            showTableStructure(tableName);
+                            // 设置当前表名，并重置分页
+                            currentTableName = tableName;
+                            currentPage = 1;
+                            pageField.setText("1");
+                            // 执行查询
+                            String sql = String.format("SELECT * FROM %s", tableName);
+                            sqlTextArea.setText(sql);
+                            executeSQL();
                         }
+                    }
+                } else if (e.getButton() == MouseEvent.BUTTON3) {
+                    // 右键点击，显示上下文菜单
+                    int row = databaseTree.getClosestRowForLocation(e.getX(), e.getY());
+                    databaseTree.setSelectionRow(row);
+                    
+                    DefaultMutableTreeNode node = (DefaultMutableTreeNode)
+                            databaseTree.getLastSelectedPathComponent();
+                    if (node == null) return;
+                    
+                    Object userObject = node.getUserObject();
+                    if (userObject instanceof String && node.getParent() != null) {
+                        // 右键点击表节点
+                        if (node.isLeaf()) {
+                            String tableName = (String)userObject;
+                            showTableContextMenu(tableName, e.getX(), e.getY());
+                        }
+                    } else if (userObject instanceof ConnectionConfig) {
+                        // 右键点击连接节点
+                        ConnectionConfig config = (ConnectionConfig)userObject;
+                        showConnectionContextMenu(config, e.getX(), e.getY());
                     }
                 }
             }
@@ -781,13 +828,43 @@ public class MainFrame extends JFrame {
     private void executeSQLInternal(String sql) {
         statusLabel.setText("正在执行SQL查询...");
         
+        // 检查SQL是否包含LIMIT子句，如果没有且不是更新语句，则添加分页
+        final String finalSql;
+        final String lowerSql = sql.toLowerCase();
+        final boolean isQueryType = lowerSql.startsWith("select") || 
+                                   lowerSql.startsWith("show") || 
+                                   lowerSql.startsWith("desc");
+        
+        if (isQueryType && !lowerSql.contains("limit")) {
+            // 添加分页
+            finalSql = sql + String.format(" LIMIT %d OFFSET %d", 
+                    pageSize, (currentPage - 1) * pageSize);
+        } else {
+            finalSql = sql;
+        }
+        
         SwingWorker<Map<String, Object>, Void> worker = new SwingWorker<Map<String, Object>, Void>() {
             @Override
             protected Map<String, Object> doInBackground() {
-                if (sql.toLowerCase().startsWith("select") || sql.toLowerCase().startsWith("show")) {
-                    return DatabaseService.executeQuery(currentConnection, sql);
+                if (isQueryType) {
+                    // 如果是查询类型的SQL，还需要获取总记录数以支持分页
+                    if (lowerSql.startsWith("select") && !lowerSql.contains("count(") && currentTableName != null) {
+                        // 先执行一个COUNT查询获取总记录数
+                        String countSql = "SELECT COUNT(*) AS total FROM " + currentTableName;
+                        Map<String, Object> countResult = DatabaseService.executeQuery(currentConnection, countSql);
+                        
+                        if ((boolean)countResult.get("success")) {
+                            @SuppressWarnings("unchecked")
+                            List<List<Object>> countData = (List<List<Object>>) countResult.get("data");
+                            if (!countData.isEmpty() && !countData.get(0).isEmpty()) {
+                                totalRecords = Integer.parseInt(countData.get(0).get(0).toString());
+                                totalPages = (int) Math.ceil((double) totalRecords / pageSize);
+                            }
+                        }
+                    }
+                    return DatabaseService.executeQuery(currentConnection, finalSql);
                 } else {
-                    return DatabaseService.executeUpdate(currentConnection, sql);
+                    return DatabaseService.executeUpdate(currentConnection, finalSql);
                 }
             }
             
@@ -807,6 +884,9 @@ public class MainFrame extends JFrame {
                             
                             resultTableModel.setData(columns, data);
                             
+                            // 更新分页信息
+                            updatePaginationInfo();
+                            
                             // 自动调整列宽
                             SwingUtilities.invokeLater(new Runnable() {
                                 @Override
@@ -816,15 +896,20 @@ public class MainFrame extends JFrame {
                                 }
                             });
                             
-                            statusLabel.setText("查询成功，共 " + data.size() + " 条记录");
+                            statusLabel.setText("查询成功，当前第 " + currentPage + " 页，共 " + 
+                                             totalPages + " 页，显示 " + data.size() + " 条记录");
                         } else {
                             // 更新结果
                             int affectedRows = (int) result.get("affectedRows");
                             resultTableModel.clear();
                             statusLabel.setText("执行成功，影响了 " + affectedRows + " 行");
                             
-                            // 刷新树
-                            refreshDatabaseTree();
+                            // 如果是修改表结构的操作，刷新树
+                            if (lowerSql.startsWith("alter") || 
+                                lowerSql.startsWith("create") || 
+                                lowerSql.startsWith("drop")) {
+                                refreshDatabaseTree();
+                            }
                         }
                     } else {
                         String error = (String) result.get("error");
@@ -844,6 +929,33 @@ public class MainFrame extends JFrame {
         };
         
         worker.execute();
+    }
+    
+    /**
+     * 更新分页信息
+     */
+    private void updatePaginationInfo() {
+        // 更新UI
+        totalPagesLabel.setText("共 " + totalPages + " 页");
+        prevPageButton.setEnabled(currentPage > 1);
+        nextPageButton.setEnabled(currentPage < totalPages);
+        
+        // 如果当前页码大于总页数，调整为最后一页
+        if (currentPage > totalPages && totalPages > 0) {
+            currentPage = totalPages;
+            pageField.setText(String.valueOf(currentPage));
+        }
+    }
+    
+    /**
+     * 执行当前查询（带分页）
+     */
+    private void executeCurrentQuery() {
+        if (currentTableName != null) {
+            String sql = String.format("SELECT * FROM %s", currentTableName);
+            sqlTextArea.setText(sql);
+            executeSQL();
+        }
     }
     
     // 添加导入连接配置功能
@@ -873,8 +985,8 @@ public class MainFrame extends JFrame {
             java.io.File file = new java.io.File(filePath);
             if (file.exists()) {
                 com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                java.util.List<ConnectionConfig> importedConnections = objectMapper.readValue(
-                        file, new com.fasterxml.jackson.core.type.TypeReference<java.util.List<ConnectionConfig>>() {});
+                List<ConnectionConfig> importedConnections = objectMapper.readValue(
+                        file, new com.fasterxml.jackson.core.type.TypeReference<List<ConnectionConfig>>() {});
                 
                 // 添加导入的连接配置
                 for (ConnectionConfig config : importedConnections) {
@@ -915,7 +1027,7 @@ public class MainFrame extends JFrame {
     private void exportConnectionsToFile(String filePath) {
         try {
             // 使用ConnectionManager导出连接配置
-            java.util.List<ConnectionConfig> connections = ConnectionManager.getConnections();
+            List<ConnectionConfig> connections = ConnectionManager.getConnections();
             com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(new java.io.File(filePath), connections);
         } catch (Exception ex) {
@@ -932,7 +1044,7 @@ public class MainFrame extends JFrame {
         
         try {
             // 使用SQLFormatter格式化SQL
-            String formattedSQL = com.database.visualization.utils.SQLFormatter.format(sqlTextArea.getText());
+            String formattedSQL = SQLFormatter.format(sqlTextArea.getText());
             sqlTextArea.setText(formattedSQL);
             JOptionPane.showMessageDialog(this, "SQL格式化成功");
         } catch (Exception ex) {
@@ -1075,5 +1187,283 @@ public class MainFrame extends JFrame {
         dialog.add(panel, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
         dialog.setVisible(true);
+    }
+    
+    /**
+     * 显示连接的上下文菜单
+     */
+    private void showConnectionContextMenu(ConnectionConfig config, int x, int y) {
+        JPopupMenu contextMenu = new JPopupMenu();
+        
+        JMenuItem connectItem = new JMenuItem("连接");
+        JMenuItem editItem = new JMenuItem("编辑连接");
+        JMenuItem deleteItem = new JMenuItem("删除连接");
+        JMenuItem refreshItem = new JMenuItem("刷新");
+        
+        connectItem.addActionListener(e -> {
+            connectDatabase(config);
+        });
+        
+        editItem.addActionListener(e -> {
+            ConnectionDialog dialog = new ConnectionDialog(this, config, false);
+            dialog.setVisible(true);
+            
+            if (dialog.isConfirmed()) {
+                ConnectionConfig newConfig = dialog.getConnectionConfig();
+                ConnectionManager.updateConnection(newConfig);
+                loadConnections();
+            }
+        });
+        
+        deleteItem.addActionListener(e -> {
+            if (JOptionPane.showConfirmDialog(this,
+                    "确定要删除连接 " + config.getName() + " 吗？",
+                    "确认删除", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+                ConnectionManager.deleteConnection(config);
+                loadConnections();
+            }
+        });
+        
+        refreshItem.addActionListener(e -> {
+            currentConnection = config;
+            refreshDatabaseTree();
+        });
+        
+        contextMenu.add(connectItem);
+        contextMenu.add(editItem);
+        contextMenu.add(deleteItem);
+        contextMenu.addSeparator();
+        contextMenu.add(refreshItem);
+        
+        contextMenu.show(databaseTree, x, y);
+    }
+    
+    /**
+     * 显示表的上下文菜单
+     */
+    private void showTableContextMenu(String tableName, int x, int y) {
+        JPopupMenu contextMenu = new JPopupMenu();
+        
+        JMenuItem queryItem = new JMenuItem("查询数据");
+        JMenuItem structureItem = new JMenuItem("表结构");
+        JMenuItem editItem = new JMenuItem("修改表");
+        JMenuItem dropItem = new JMenuItem("删除表");
+        JMenuItem emptyItem = new JMenuItem("清空表");
+        JMenuItem exportItem = new JMenuItem("导出数据");
+        
+        queryItem.addActionListener(e -> {
+            currentTableName = tableName;
+            currentPage = 1;
+            pageField.setText("1");
+            executeCurrentQuery();
+        });
+        
+        structureItem.addActionListener(e -> {
+            showTableStructure(tableName);
+        });
+        
+        editItem.addActionListener(e -> {
+            showEditTableDialog(tableName);
+        });
+        
+        dropItem.addActionListener(e -> {
+            if (JOptionPane.showConfirmDialog(this,
+                    "确定要删除表 " + tableName + " 吗？此操作不可逆！",
+                    "确认删除", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+                executeSQL("DROP TABLE " + tableName);
+                refreshDatabaseTree();
+            }
+        });
+        
+        emptyItem.addActionListener(e -> {
+            if (JOptionPane.showConfirmDialog(this,
+                    "确定要清空表 " + tableName + " 的所有数据吗？此操作不可逆！",
+                    "确认清空", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+                executeSQL("TRUNCATE TABLE " + tableName);
+            }
+        });
+        
+        exportItem.addActionListener(e -> {
+            exportTableData(tableName);
+        });
+        
+        contextMenu.add(queryItem);
+        contextMenu.add(structureItem);
+        contextMenu.addSeparator();
+        contextMenu.add(editItem);
+        contextMenu.add(dropItem);
+        contextMenu.add(emptyItem);
+        contextMenu.addSeparator();
+        contextMenu.add(exportItem);
+        
+        contextMenu.show(databaseTree, x, y);
+    }
+    
+    /**
+     * 导出表数据
+     */
+    private void exportTableData(String tableName) {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("导出表数据");
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("CSV文件", "csv"));
+        
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            String filePath = fileChooser.getSelectedFile().getPath();
+            if (!filePath.endsWith(".csv")) {
+                filePath += ".csv";
+            }
+            
+            final String finalPath = filePath;
+            SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
+                @Override
+                protected Boolean doInBackground() {
+                    try {
+                        // 执行查询获取所有数据
+                        Map<String, Object> result = DatabaseService.executeQuery(
+                                currentConnection, "SELECT * FROM " + tableName);
+                        
+                        if ((boolean)result.get("success")) {
+                            @SuppressWarnings("unchecked")
+                            List<String> columns = (List<String>) result.get("columns");
+                            @SuppressWarnings("unchecked")
+                            List<List<Object>> data = (List<List<Object>>) result.get("data");
+                            
+                            // 导出到CSV
+                            java.io.PrintWriter writer = new java.io.PrintWriter(new java.io.File(finalPath));
+                            
+                            // 写入表头
+                            StringBuilder header = new StringBuilder();
+                            for (int i = 0; i < columns.size(); i++) {
+                                if (i > 0) header.append(",");
+                                header.append("\"").append(columns.get(i)).append("\"");
+                            }
+                            writer.println(header.toString());
+                            
+                            // 写入数据
+                            for (List<Object> row : data) {
+                                StringBuilder line = new StringBuilder();
+                                for (int i = 0; i < row.size(); i++) {
+                                    if (i > 0) line.append(",");
+                                    Object value = row.get(i);
+                                    if (value != null) {
+                                        line.append("\"").append(value.toString().replace("\"", "\"\"")).append("\"");
+                                    } else {
+                                        line.append("\"\"");
+                                    }
+                                }
+                                writer.println(line.toString());
+                            }
+                            
+                            writer.close();
+                            return true;
+                        }
+                        return false;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        return false;
+                    }
+                }
+                
+                @Override
+                protected void done() {
+                    try {
+                        boolean success = get();
+                        if (success) {
+                            JOptionPane.showMessageDialog(MainFrame.this, 
+                                    "表数据已成功导出到: " + finalPath, 
+                                    "导出成功", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(MainFrame.this, 
+                                    "导出表数据失败", 
+                                    "导出失败", JOptionPane.ERROR_MESSAGE);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        JOptionPane.showMessageDialog(MainFrame.this, 
+                                "导出表数据失败: " + e.getMessage(), 
+                                "导出失败", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            };
+            
+            statusLabel.setText("正在导出表数据...");
+            worker.execute();
+        }
+    }
+
+    /**
+     * 创建分页控制面板
+     */
+    private JPanel createPaginationPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+        
+        JLabel pageLabel = new JLabel("页码:");
+        pageField = new JTextField("1", 3);
+        
+        JLabel pageSizeLabel = new JLabel("每页行数:");
+        pageSizeField = new JTextField(String.valueOf(pageSize), 4);
+        
+        prevPageButton = new JButton("上一页");
+        nextPageButton = new JButton("下一页");
+        totalPagesLabel = new JLabel("共 1 页");
+        
+        // 添加事件监听器
+        prevPageButton.addActionListener(e -> {
+            if (currentPage > 1) {
+                currentPage--;
+                pageField.setText(String.valueOf(currentPage));
+                executeCurrentQuery();
+            }
+        });
+        
+        nextPageButton.addActionListener(e -> {
+            if (currentPage < totalPages) {
+                currentPage++;
+                pageField.setText(String.valueOf(currentPage));
+                executeCurrentQuery();
+            }
+        });
+        
+        pageField.addActionListener(e -> {
+            try {
+                int page = Integer.parseInt(pageField.getText());
+                if (page > 0) {
+                    currentPage = page;
+                    executeCurrentQuery();
+                } else {
+                    pageField.setText(String.valueOf(currentPage));
+                }
+            } catch (NumberFormatException ex) {
+                pageField.setText(String.valueOf(currentPage));
+            }
+        });
+        
+        pageSizeField.addActionListener(e -> {
+            try {
+                int size = Integer.parseInt(pageSizeField.getText());
+                if (size > 0) {
+                    pageSize = size;
+                    currentPage = 1;
+                    pageField.setText("1");
+                    executeCurrentQuery();
+                } else {
+                    pageSizeField.setText(String.valueOf(pageSize));
+                }
+            } catch (NumberFormatException ex) {
+                pageSizeField.setText(String.valueOf(pageSize));
+            }
+        });
+        
+        // 添加组件到面板
+        panel.add(pageLabel);
+        panel.add(pageField);
+        panel.add(pageSizeLabel);
+        panel.add(pageSizeField);
+        panel.add(prevPageButton);
+        panel.add(nextPageButton);
+        panel.add(totalPagesLabel);
+        
+        return panel;
     }
 } 
