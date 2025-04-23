@@ -6,6 +6,7 @@ import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.*;
 import java.util.*;
+import java.lang.reflect.Method;
 
 /**
  * 数据库服务，用于管理连接和执行查询
@@ -429,11 +430,58 @@ public class DatabaseService {
                     }
                     break;
                     
+                case "keys":
+                    if (parts.length > 1) {
+                        String pattern = parts[1];
+                        Set<String> keys = (Set<String>) jedisClass.getMethod("keys", String.class)
+                                .invoke(jedis, pattern);
+                        
+                        columnNames.add("key");
+                        
+                        for (String key : keys) {
+                            List<Object> row = new ArrayList<>();
+                            row.add(key);
+                            data.add(row);
+                        }
+                    }
+                    break;
+                    
+                case "type":
+                    if (parts.length > 1) {
+                        String key = parts[1];
+                        String type = (String) jedisClass.getMethod("type", String.class)
+                                .invoke(jedis, key);
+                        
+                        columnNames.add("key");
+                        columnNames.add("type");
+                        
+                        List<Object> row = new ArrayList<>();
+                        row.add(key);
+                        row.add(type);
+                        data.add(row);
+                    }
+                    break;
+                    
+                case "ttl":
+                    if (parts.length > 1) {
+                        String key = parts[1];
+                        Long ttl = (Long) jedisClass.getMethod("ttl", String.class)
+                                .invoke(jedis, key);
+                        
+                        columnNames.add("key");
+                        columnNames.add("ttl");
+                        
+                        List<Object> row = new ArrayList<>();
+                        row.add(key);
+                        row.add(ttl);
+                        data.add(row);
+                    }
+                    break;
+                    
                 case "hgetall":
                     if (parts.length > 1) {
                         String key = parts[1];
-                        Map<String, String> hash = (Map<String, String>) jedisClass
-                                .getMethod("hgetAll", String.class)
+                        Map<String, String> hash = (Map<String, String>) jedisClass.getMethod("hgetAll", String.class)
                                 .invoke(jedis, key);
                         
                         columnNames.add("key");
@@ -456,8 +504,7 @@ public class DatabaseService {
                         long start = Long.parseLong(parts[2]);
                         long end = Long.parseLong(parts[3]);
                         
-                        List<String> list = (List<String>) jedisClass
-                                .getMethod("lrange", String.class, long.class, long.class)
+                        List<String> list = (List<String>) jedisClass.getMethod("lrange", String.class, long.class, long.class)
                                 .invoke(jedis, key, start, end);
                         
                         columnNames.add("key");
@@ -477,20 +524,15 @@ public class DatabaseService {
                 case "smembers":
                     if (parts.length > 1) {
                         String key = parts[1];
-                        Set<String> members = (Set<String>) jedisClass
-                                .getMethod("smembers", String.class)
+                        Set<String> members = (Set<String>) jedisClass.getMethod("smembers", String.class)
                                 .invoke(jedis, key);
                         
-                        columnNames.add("key");
-                        columnNames.add("value");
+                        columnNames.add("member");
                         
-                        int index = 0;
                         for (String member : members) {
                             List<Object> row = new ArrayList<>();
-                            row.add(key);
                             row.add(member);
                             data.add(row);
-                            index++;
                         }
                     }
                     break;
@@ -504,66 +546,77 @@ public class DatabaseService {
                         
                         Set<String> zrange;
                         if (withScores) {
-                            zrange = (Set<String>) jedisClass
-                                    .getMethod("zrangeWithScores", String.class, long.class, long.class)
+                            zrange = (Set<String>) jedisClass.getMethod("zrangeWithScores", String.class, long.class, long.class)
                                     .invoke(jedis, key, start, end);
                             
                             columnNames.add("key");
                             columnNames.add("value");
                             columnNames.add("score");
                             
-                            // 解析带分数的结果
-                            // 这里实现比较复杂，简化处理
-                            List<Object> row = new ArrayList<>();
-                            row.add(key);
-                            row.add("请使用Jedis客户端获取完整的zrangeWithScores结果");
-                            row.add(0.0);
-                            data.add(row);
-                        } else {
-                            zrange = (Set<String>) jedisClass
-                                    .getMethod("zrange", String.class, long.class, long.class)
+                            // 这里处理有点复杂，因为返回的是一个Set<Tuple>，需要特殊处理
+                            // 简化处理，直接获取所有元素再获取分数
+                            Set<String> members = (Set<String>) jedisClass.getMethod("zrange", String.class, long.class, long.class)
                                     .invoke(jedis, key, start, end);
                             
-                            columnNames.add("key");
-                            columnNames.add("value");
+                            for (String member : members) {
+                                Double score = (Double) jedisClass.getMethod("zscore", String.class, String.class)
+                                        .invoke(jedis, key, member);
+                                
+                                List<Object> row = new ArrayList<>();
+                                row.add(member);
+                                row.add(score);
+                                data.add(row);
+                            }
+                        } else {
+                            zrange = (Set<String>) jedisClass.getMethod("zrange", String.class, long.class, long.class)
+                                    .invoke(jedis, key, start, end);
                             
-                            int index = 0;
+                            columnNames.add("member");
+                            
                             for (String member : zrange) {
                                 List<Object> row = new ArrayList<>();
-                                row.add(key);
                                 row.add(member);
                                 data.add(row);
-                                index++;
                             }
                         }
                     }
                     break;
                     
-                case "keys":
-                    if (parts.length > 1) {
-                        String pattern = parts[1];
-                        Set<String> keys = (Set<String>) jedisClass
-                                .getMethod("keys", String.class)
-                                .invoke(jedis, pattern);
+                case "info":
+                    String section = parts.length > 1 ? parts[1] : null;
+                    String info;
+                    
+                    if (section != null) {
+                        info = (String) jedisClass.getMethod("info", String.class)
+                                .invoke(jedis, section);
+                    } else {
+                        info = (String) jedisClass.getMethod("info")
+                                .invoke(jedis);
+                    }
+                    
+                    columnNames.add("property");
+                    columnNames.add("value");
+                    
+                    for (String line : info.split("\n")) {
+                        if (line.startsWith("#") || line.trim().isEmpty()) {
+                            continue;
+                        }
                         
-                        columnNames.add("key");
-                        columnNames.add("type");
-                        
-                        for (String key : keys) {
-                            String type = (String) jedisClass
-                                    .getMethod("type", String.class)
-                                    .invoke(jedis, key);
-                            
+                        String[] parts2 = line.split(":");
+                        if (parts2.length == 2) {
                             List<Object> row = new ArrayList<>();
-                            row.add(key);
-                            row.add(type);
+                            row.add(parts2[0].trim());
+                            row.add(parts2[1].trim());
                             data.add(row);
                         }
                     }
                     break;
                     
                 default:
-                    throw new Exception("不支持的Redis命令: " + cmd);
+                    columnNames.add("警告");
+                    List<Object> row = new ArrayList<>();
+                    row.add("不支持的查询命令: " + cmd + "。请尝试Redis支持的命令，如GET、KEYS、TYPE、TTL、HGETALL、LRANGE、SMEMBERS、ZRANGE、INFO等。");
+                    data.add(row);
             }
             
             result.put("success", true);
@@ -731,8 +784,66 @@ public class DatabaseService {
                     }
                     break;
                     
+                case "expire":
+                    if (parts.length > 2) {
+                        String key = parts[1];
+                        int seconds = Integer.parseInt(parts[2]);
+                        
+                        Long response = (Long) jedisClass
+                                .getMethod("expire", String.class, int.class)
+                                .invoke(jedis, key, seconds);
+                        
+                        result.put("success", response > 0);
+                        result.put("affectedRows", response);
+                    } else {
+                        throw new Exception("EXPIRE命令格式：EXPIRE key seconds");
+                    }
+                    break;
+                    
+                case "select":
+                    if (parts.length > 1) {
+                        int dbIndex = Integer.parseInt(parts[1]);
+                        
+                        String response = (String) jedisClass
+                                .getMethod("select", int.class)
+                                .invoke(jedis, dbIndex);
+                        
+                        result.put("success", "OK".equalsIgnoreCase(response));
+                        result.put("affectedRows", 0);
+                        result.put("message", "已切换到数据库" + dbIndex);
+                    } else {
+                        throw new Exception("SELECT命令格式：SELECT index");
+                    }
+                    break;
+                    
                 default:
-                    throw new Exception("不支持的Redis命令: " + cmd);
+                    // 尝试通过反射调用其他命令
+                    try {
+                        // 将命令和参数分开
+                        String[] params = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0];
+                        
+                        // 尝试找到匹配的方法
+                        Method method = findMatchingMethod(jedisClass, cmd, params.length);
+                        
+                        if (method != null) {
+                            // 准备参数
+                            Object[] methodParams = new Object[params.length];
+                            for (int i = 0; i < params.length; i++) {
+                                methodParams[i] = params[i];
+                            }
+                            
+                            // 执行命令
+                            Object response = method.invoke(jedis, methodParams);
+                            
+                            result.put("success", true);
+                            result.put("affectedRows", response instanceof Number ? ((Number)response).intValue() : 0);
+                            result.put("message", "命令执行成功: " + response);
+                        } else {
+                            throw new Exception("不支持的Redis命令: " + cmd);
+                        }
+                    } catch (NoSuchMethodException e) {
+                        throw new Exception("不支持的Redis命令: " + cmd);
+                    }
             }
             
         } catch (Exception e) {
@@ -742,5 +853,79 @@ public class DatabaseService {
         }
         
         return result;
+    }
+    
+    /**
+     * 查找匹配的方法
+     */
+    private static Method findMatchingMethod(Class<?> jedisClass, String methodName, int paramCount) throws NoSuchMethodException {
+        for (Method method : jedisClass.getMethods()) {
+            if (method.getName().equalsIgnoreCase(methodName) && 
+                method.getParameterCount() == paramCount) {
+                return method;
+            }
+        }
+        throw new NoSuchMethodException("找不到匹配的方法: " + methodName + " 参数数量: " + paramCount);
+    }
+    
+    /**
+     * 获取Redis数据库列表
+     */
+    public static List<String> getRedisDatabases(ConnectionConfig config) {
+        List<String> databases = new ArrayList<>();
+        
+        try {
+            Object jedis = getRedisConnection(config);
+            Class<?> jedisClass = jedis.getClass();
+            
+            // Redis默认有16个数据库(0-15)
+            for (int i = 0; i < 16; i++) {
+                // 尝试选择数据库
+                try {
+                    jedisClass.getMethod("select", int.class).invoke(jedis, i);
+                    // 获取数据库中的键数量
+                    Long keyCount = (Long) jedisClass.getMethod("dbSize").invoke(jedis);
+                    
+                    // 添加数据库到列表
+                    databases.add("db" + i + " (" + keyCount + " keys)");
+                } catch (Exception e) {
+                    // 如果选择数据库失败，可能是权限问题或该数据库不可用
+                    // 继续检查下一个数据库
+                }
+            }
+            
+            // 恢复到原来的数据库
+            int dbIndex = 0;
+            if (config.getDatabase() != null && !config.getDatabase().isEmpty()) {
+                try {
+                    dbIndex = Integer.parseInt(config.getDatabase());
+                } catch (NumberFormatException e) {
+                    // 使用默认数据库0
+                }
+            }
+            jedisClass.getMethod("select", int.class).invoke(jedis, dbIndex);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        return databases;
+    }
+
+    /**
+     * 切换Redis数据库
+     */
+    public static boolean selectRedisDatabase(ConnectionConfig config, int dbIndex) {
+        try {
+            Object jedis = getRedisConnection(config);
+            Class<?> jedisClass = jedis.getClass();
+            
+            // 选择数据库
+            String response = (String) jedisClass.getMethod("select", int.class).invoke(jedis, dbIndex);
+            return "OK".equalsIgnoreCase(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 } 
