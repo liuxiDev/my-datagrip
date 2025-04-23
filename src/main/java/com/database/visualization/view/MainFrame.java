@@ -240,19 +240,18 @@ public class MainFrame extends JFrame {
         
         // 文件菜单
         JMenu fileMenu = new JMenu("文件");
-        JMenuItem newConnItem = new JMenuItem("新建连接");
-        JMenuItem importItem = new JMenuItem("导入连接配置");
-        JMenuItem exportItem = new JMenuItem("导出连接配置");
+        JMenuItem newConnectionItem = new JMenuItem("新建连接");
+        JMenuItem importItem = new JMenuItem("导入连接");
+        JMenuItem exportItem = new JMenuItem("导出连接");
         JMenuItem exitItem = new JMenuItem("退出");
         
-        newConnItem.addActionListener(new ActionListener() {
+        newConnectionItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 addNewConnection();
             }
         });
         
-        // 添加导入连接配置功能
         importItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -260,7 +259,6 @@ public class MainFrame extends JFrame {
             }
         });
         
-        // 添加导出连接配置功能
         exportItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -271,11 +269,13 @@ public class MainFrame extends JFrame {
         exitItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                dispose();
                 System.exit(0);
             }
         });
         
-        fileMenu.add(newConnItem);
+        fileMenu.add(newConnectionItem);
+        fileMenu.addSeparator();
         fileMenu.add(importItem);
         fileMenu.add(exportItem);
         fileMenu.addSeparator();
@@ -283,42 +283,23 @@ public class MainFrame extends JFrame {
         
         // 编辑菜单
         JMenu editMenu = new JMenu("编辑");
-        JMenuItem executeItem = new JMenuItem("执行SQL");
-        JMenuItem formatSqlItem = new JMenuItem("格式化SQL");
-        JMenuItem clearItem = new JMenuItem("清空编辑器");
+        JMenuItem formatItem = new JMenuItem("格式化SQL");
         
-        executeItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                executeSQL();
-            }
-        });
-        
-        // 添加格式化SQL功能
-        formatSqlItem.addActionListener(new ActionListener() {
+        formatItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 formatSQL();
             }
         });
         
-        clearItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                sqlTextArea.setText("");
-            }
-        });
-        
-        editMenu.add(executeItem);
-        editMenu.add(formatSqlItem);
-        editMenu.add(clearItem);
+        editMenu.add(formatItem);
         
         // 工具菜单
         JMenu toolsMenu = new JMenu("工具");
-        JMenuItem monitorItem = new JMenuItem("性能监控");
+        JMenuItem monitoringItem = new JMenuItem("性能监控");
         JMenuItem securityItem = new JMenuItem("安全设置");
         
-        monitorItem.addActionListener(new ActionListener() {
+        monitoringItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 showMonitoringDialog();
@@ -332,8 +313,68 @@ public class MainFrame extends JFrame {
             }
         });
         
-        toolsMenu.add(monitorItem);
+        toolsMenu.add(monitoringItem);
         toolsMenu.add(securityItem);
+        
+        // 设置菜单
+        JMenu settingsMenu = new JMenu("设置");
+        JMenu themeMenu = new JMenu("主题");
+        JMenuItem darkThemeItem = new JMenuItem("深色主题");
+        JMenuItem lightThemeItem = new JMenuItem("浅色主题");
+        JMenu fontSizeMenu = new JMenu("字体大小");
+        JMenuItem smallFontItem = new JMenuItem("小");
+        JMenuItem mediumFontItem = new JMenuItem("中");
+        JMenuItem largeFontItem = new JMenuItem("大");
+        
+        darkThemeItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                com.database.visualization.DataBaseVisualizer.isDarkTheme = true;
+                com.database.visualization.DataBaseVisualizer.applyTheme();
+                setApplicationTheme();
+            }
+        });
+        
+        lightThemeItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                com.database.visualization.DataBaseVisualizer.isDarkTheme = false;
+                com.database.visualization.DataBaseVisualizer.applyTheme();
+                setApplicationTheme();
+            }
+        });
+        
+        smallFontItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                com.database.visualization.DataBaseVisualizer.fontSizeFactor = 0.85f;
+                updateGlobalFontSize();
+            }
+        });
+        
+        mediumFontItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                com.database.visualization.DataBaseVisualizer.fontSizeFactor = 1.0f;
+                updateGlobalFontSize();
+            }
+        });
+        
+        largeFontItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                com.database.visualization.DataBaseVisualizer.fontSizeFactor = 1.2f;
+                updateGlobalFontSize();
+            }
+        });
+        
+        themeMenu.add(darkThemeItem);
+        themeMenu.add(lightThemeItem);
+        fontSizeMenu.add(smallFontItem);
+        fontSizeMenu.add(mediumFontItem);
+        fontSizeMenu.add(largeFontItem);
+        settingsMenu.add(themeMenu);
+        settingsMenu.add(fontSizeMenu);
         
         // 帮助菜单
         JMenu helpMenu = new JMenu("帮助");
@@ -343,8 +384,9 @@ public class MainFrame extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 JOptionPane.showMessageDialog(MainFrame.this,
-                        "数据库可视化工具\nVersion 1.0\n作者: Java开发者",
-                        "关于", JOptionPane.INFORMATION_MESSAGE);
+                        "数据库可视化工具 v1.0\n作者：数据库开发团队",
+                        "关于",
+                        JOptionPane.INFORMATION_MESSAGE);
             }
         });
         
@@ -353,6 +395,7 @@ public class MainFrame extends JFrame {
         menuBar.add(fileMenu);
         menuBar.add(editMenu);
         menuBar.add(toolsMenu);
+        menuBar.add(settingsMenu);
         menuBar.add(helpMenu);
         
         return menuBar;
@@ -487,51 +530,43 @@ public class MainFrame extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                // 关闭程序时断开所有数据库连接
-                DatabaseService.closeAllConnections();
+                // 保存连接配置
+                ConnectionManager.saveConnections();
             }
         });
         
-        // 树节点选择事件
+        // 添加树选择事件监听器
         databaseTree.addTreeSelectionListener(e -> handleTreeSelection(e));
         
-        // 树节点点击事件
+        // 添加树鼠标事件监听器
         databaseTree.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // 获取点击的节点
-                int row = databaseTree.getRowForLocation(e.getX(), e.getY());
-                if (row == -1) return;
+                TreePath path = databaseTree.getPathForLocation(e.getX(), e.getY());
+                if (path == null) return;
                 
-                // 检查是否点击到了展开/收缩控件
-                Rectangle rowBounds = databaseTree.getRowBounds(row);
-                boolean clickOnTreeIcon = e.getX() <= rowBounds.x;
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+                Object userObject = node.getUserObject();
                 
-                // 如果点击到展开/收缩控件，不需要再处理（系统自动处理）
-                if (clickOnTreeIcon) {
+                // 处理右键点击
+                if (e.getButton() == MouseEvent.BUTTON3) {
+                    showTreeNodeContextMenu(node, e.getX(), e.getY());
                     return;
                 }
                 
-                DefaultMutableTreeNode node = (DefaultMutableTreeNode)
-                        databaseTree.getPathForRow(row).getLastPathComponent();
-                if (node == null) return;
-                
-                TreePath path = databaseTree.getPathForRow(row);
-                databaseTree.setSelectionPath(path);
-                
-                // 双击事件
+                // 处理双击
                 if (e.getClickCount() == 2) {
-                    Object userObject = node.getUserObject();
-                    
+                    // 如果双击连接节点
                     if (userObject instanceof ConnectionConfig) {
-                        // 双击连接节点，连接数据库并展开
-                        connectDatabase((ConnectionConfig)userObject);
-                    } else if (userObject instanceof String && node.getParent() != null) {
-                        DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode)node.getParent();
+                        connectDatabase((ConnectionConfig) userObject);
+                    }
+                    // 如果双击数据库节点
+                    else if (userObject instanceof String && node.getParent() != null) {
+                        DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) node.getParent();
                         Object parentObject = parentNode.getUserObject();
                         
                         if (parentObject instanceof ConnectionConfig) {
-                            // 双击数据库/schema节点，展开或收缩节点
+                            // 如果父节点是连接配置，则展开/折叠
                             if (databaseTree.isExpanded(path)) {
                                 databaseTree.collapsePath(path);
                             } else {
@@ -554,35 +589,20 @@ public class MainFrame extends JFrame {
                                 DefaultMutableTreeNode grandParentNode = (DefaultMutableTreeNode)parentNode.getParent();
                                 
                                 if (grandParentNode != null && grandParentNode.getUserObject() instanceof ConnectionConfig) {
-                                    currentConnection = (ConnectionConfig) grandParentNode.getUserObject();
-                                    
-                                    // 设置当前表名，并重置分页
-                                    currentTableName = String.format("%s.%s", dbName, tableName);
+                                    currentConnection = (ConnectionConfig)grandParentNode.getUserObject();
+                                    currentTableName = dbName + "." + tableName;
                                     currentPage = 1;
                                     pageField.setText("1");
-                                    
-                                    // 执行查询
-                                    String sql = String.format("SELECT * FROM %s", currentTableName);
+                                    String sql = String.format("SELECT * FROM %s.%s", dbName, tableName);
                                     sqlTextArea.setText(sql);
                                     executeSQL();
                                 }
-                            } else {
-                                // 如果是非叶子节点，展开/收缩
-                                if (databaseTree.isExpanded(path)) {
-                                    databaseTree.collapsePath(path);
-                                } else {
-                                    databaseTree.expandPath(path);
-                                }
                             }
                         }
-                    } else if (e.getButton() == MouseEvent.BUTTON3) {
-                        // 右键点击，显示上下文菜单
-                        DefaultMutableTreeNode node2 = (DefaultMutableTreeNode)
-                                databaseTree.getLastSelectedPathComponent();
-                        
-                        if (node2 != null) {
-                            showTreeNodeContextMenu(node2, e.getX(), e.getY());
-                        }
+                    }
+                    // 如果双击表节点
+                    else if (userObject instanceof String && node.isLeaf()) {
+                        // 这部分已在上面处理
                     }
                 }
             }
@@ -688,6 +708,11 @@ public class MainFrame extends JFrame {
      */
     private void loadConnections() {
         rootNode.removeAllChildren();
+        
+        // 这里如果没有任何数据库连接应该忽略，不进行任何连接
+        if (ConnectionManager.getConnections().isEmpty()) {
+            return;
+        }
         
         for (ConnectionConfig config : ConnectionManager.getConnections()) {
             DefaultMutableTreeNode connNode = new DefaultMutableTreeNode(config);
@@ -2841,31 +2866,144 @@ public class MainFrame extends JFrame {
      * 设置应用程序主题颜色
      */
     private void setApplicationTheme() {
-        // 设置主界面颜色
-        getContentPane().setBackground(new Color(43, 43, 43));
-        
-        // 设置树的颜色
-        databaseTree.setBackground(new Color(43, 43, 43));
-        databaseTree.setForeground(new Color(187, 187, 187));
-        
-        // 设置滚动面板的颜色
-        for (Component c : getContentPane().getComponents()) {
-            if (c instanceof JScrollPane) {
-                JScrollPane scrollPane = (JScrollPane) c;
-                scrollPane.getViewport().setBackground(new Color(43, 43, 43));
-                scrollPane.setBorder(BorderFactory.createLineBorder(new Color(60, 63, 65)));
+        if (com.database.visualization.DataBaseVisualizer.isDarkTheme) {
+            // 深色主题
+            // 设置主界面颜色
+            getContentPane().setBackground(new Color(43, 43, 43));
+            
+            // 设置树的颜色
+            databaseTree.setBackground(new Color(43, 43, 43));
+            databaseTree.setForeground(new Color(187, 187, 187));
+            
+            // 设置文本区域的颜色
+            sqlTextArea.setBackground(new Color(43, 43, 43));
+            sqlTextArea.setForeground(new Color(187, 187, 187));
+            sqlTextArea.setCaretColor(Color.WHITE);
+            
+            // 设置表格颜色
+            resultTable.setBackground(new Color(43, 43, 43));
+            resultTable.setForeground(new Color(187, 187, 187));
+            resultTable.setGridColor(new Color(60, 63, 65));
+            
+            // 设置表头颜色
+            JTableHeader header = resultTable.getTableHeader();
+            header.setBackground(new Color(43, 43, 43));
+            header.setForeground(new Color(187, 187, 187));
+            
+            // 设置状态栏颜色
+            statusLabel.setForeground(new Color(187, 187, 187));
+            
+            // 设置滚动面板的颜色
+            for (Component c : getContentPane().getComponents()) {
+                if (c instanceof JScrollPane) {
+                    JScrollPane scrollPane = (JScrollPane) c;
+                    scrollPane.getViewport().setBackground(new Color(43, 43, 43));
+                    scrollPane.setBorder(BorderFactory.createLineBorder(new Color(60, 63, 65)));
+                }
+            }
+            
+            // 设置分割面板颜色
+            if (mainSplitPane != null) {
+                mainSplitPane.setBackground(new Color(43, 43, 43));
+                mainSplitPane.setBorder(BorderFactory.createLineBorder(new Color(60, 63, 65)));
+            }
+            
+            if (leftSplitPane != null) {
+                leftSplitPane.setBackground(new Color(43, 43, 43));
+                leftSplitPane.setBorder(BorderFactory.createLineBorder(new Color(60, 63, 65)));
+            }
+        } else {
+            // 浅色主题
+            // 设置主界面颜色
+            getContentPane().setBackground(new Color(240, 240, 240));
+            
+            // 设置树的颜色
+            databaseTree.setBackground(Color.WHITE);
+            databaseTree.setForeground(Color.BLACK);
+            
+            // 设置文本区域的颜色
+            sqlTextArea.setBackground(Color.WHITE);
+            sqlTextArea.setForeground(Color.BLACK);
+            sqlTextArea.setCaretColor(Color.BLACK);
+            
+            // 设置表格颜色
+            resultTable.setBackground(Color.WHITE);
+            resultTable.setForeground(Color.BLACK);
+            resultTable.setGridColor(new Color(200, 200, 200));
+            
+            // 设置表头颜色
+            JTableHeader header = resultTable.getTableHeader();
+            header.setBackground(new Color(230, 230, 230));
+            header.setForeground(Color.BLACK);
+            
+            // 设置状态栏颜色
+            statusLabel.setForeground(Color.BLACK);
+            
+            // 设置滚动面板的颜色
+            for (Component c : getContentPane().getComponents()) {
+                if (c instanceof JScrollPane) {
+                    JScrollPane scrollPane = (JScrollPane) c;
+                    scrollPane.getViewport().setBackground(Color.WHITE);
+                    scrollPane.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+                }
+            }
+            
+            // 设置分割面板颜色
+            if (mainSplitPane != null) {
+                mainSplitPane.setBackground(new Color(240, 240, 240));
+                mainSplitPane.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
+            }
+            
+            if (leftSplitPane != null) {
+                leftSplitPane.setBackground(new Color(240, 240, 240));
+                leftSplitPane.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
             }
         }
+    }
+    
+    /**
+     * 更新全局字体大小
+     */
+    private void updateGlobalFontSize() {
+        float factor = com.database.visualization.DataBaseVisualizer.fontSizeFactor;
         
-        // 设置分割面板颜色
-        if (mainSplitPane != null) {
-            mainSplitPane.setBackground(new Color(43, 43, 43));
-            mainSplitPane.setBorder(BorderFactory.createLineBorder(new Color(60, 63, 65)));
+        // 获取当前默认字体
+        Font defaultFont = UIManager.getFont("Label.font");
+        if (defaultFont == null) {
+            defaultFont = new Font("Dialog", Font.PLAIN, 12);
         }
         
-        if (leftSplitPane != null) {
-            leftSplitPane.setBackground(new Color(43, 43, 43));
-            leftSplitPane.setBorder(BorderFactory.createLineBorder(new Color(60, 63, 65)));
+        // 计算新字体大小
+        int newSize = Math.round(defaultFont.getSize() * factor);
+        Font newFont = defaultFont.deriveFont((float) newSize);
+        
+        // 更新树的字体
+        databaseTree.setFont(newFont);
+        
+        // 更新文本区域的字体
+        sqlTextArea.setFont(newFont);
+        
+        // 更新表格字体
+        resultTable.setFont(newFont);
+        resultTable.getTableHeader().setFont(newFont);
+        
+        // 更新分页面板中的组件字体
+        for (Component comp : paginationPanel.getComponents()) {
+            comp.setFont(newFont);
         }
+        
+        // 更新数据编辑面板中的组件字体
+        for (Component comp : dataEditPanel.getComponents()) {
+            comp.setFont(newFont);
+        }
+        
+        // 根据字体大小调整行高
+        resultTable.setRowHeight(Math.max(25, Math.round(25 * factor)));
+        
+        // 更新状态栏字体
+        statusLabel.setFont(newFont);
+        
+        // 刷新UI
+        SwingUtilities.updateComponentTreeUI(this);
     }
 } 
