@@ -61,4 +61,6 @@ java -jar target/datab-1.0-SNAPSHOT-jar-with-dependencies.jar
 ## 注意事项
 
 - 保存的连接信息存储在应用程序目录下的`connections.json`文件中
-- 密码以明文形式存储，生产环境使用时请注意数据安全 
+- 密码以明文形式存储，生产环境使用时请注意数据安全
+
+![ef29961aed985a8ff3244daf1f254d0](https://github.com/user-attachments/assets/e3ca1238-8aff-4c2f-bae6-174454738f45)
