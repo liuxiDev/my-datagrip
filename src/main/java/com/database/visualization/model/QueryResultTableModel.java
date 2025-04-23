@@ -3,6 +3,8 @@ package com.database.visualization.model;
 import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashSet;
 
 /**
  * 查询结果表格模型
@@ -37,6 +39,30 @@ public class QueryResultTableModel extends AbstractTableModel {
         }
         
         this.originalRowCount = data.size();
+        fireTableStructureChanged();
+    }
+    
+    /**
+     * 设置数据（List<Map<String, Object>>数据类型）
+     * @param dataList 数据列表
+     * @param columnList 列名列表
+     */
+    public void setDataFromMap(List<Map<String, Object>> dataList, List<String> columnList) {
+        this.columnNames = columnList;
+        this.data = new ArrayList<>();
+        
+        // 转换Map数据为列表数据
+        for (Map<String, Object> row : dataList) {
+            List<Object> rowData = new ArrayList<>();
+            for (String column : columnList) {
+                rowData.add(row.get(column));
+            }
+            this.data.add(rowData);
+        }
+        
+        this.originalData = new ArrayList<>(this.data);
+        this.modifiedRows = new ArrayList<>();
+        
         fireTableStructureChanged();
     }
     
@@ -163,6 +189,66 @@ public class QueryResultTableModel extends AbstractTableModel {
             originalData.add(new ArrayList<>(row));
         }
         originalRowCount = data.size();
+        fireTableDataChanged();
+    }
+    
+    /**
+     * 添加新行
+     */
+    public void addRow() {
+        List<Object> newRow = new ArrayList<>();
+        for (int i = 0; i < columnNames.size(); i++) {
+            newRow.add(null);
+        }
+        data.add(newRow);
+        // 不添加到原始数据，这是新行标记
+        
+        fireTableRowsInserted(data.size() - 1, data.size() - 1);
+    }
+    
+    /**
+     * 标记行为已删除
+     * @param row 行索引
+     */
+    public void markRowAsDeleted(int row) {
+        // 标记删除状态，实际上可以使用一个额外的列表来记录
+        // 这里仅做示例，实际应用中可以设计一个更复杂的状态管理系统
+        data.get(row).clear(); // 清空行数据作为标记
+        fireTableRowsUpdated(row, row);
+    }
+    
+    /**
+     * 检查行是否被标记为删除
+     * @param row 行索引
+     * @return 是否被标记为删除
+     */
+    public boolean isRowDeleted(Integer row) {
+        if (row >= 0 && row < data.size()) {
+            List<Object> rowData = data.get(row);
+            // 检查是否为空列表（我们用空列表标记删除）
+            return rowData.isEmpty();
+        }
+        return false;
+    }
+    
+    /**
+     * 检查是否为新行
+     * @param row 行索引
+     * @return 是否为新行
+     */
+    public boolean isNewRow(Integer row) {
+        return row >= originalData.size();
+    }
+    
+    /**
+     * 清除所有修改标记
+     */
+    public void clearModifications() {
+        // 重置数据为原始数据
+        data.clear();
+        for (List<Object> row : originalData) {
+            data.add(new ArrayList<>(row));
+        }
         fireTableDataChanged();
     }
     

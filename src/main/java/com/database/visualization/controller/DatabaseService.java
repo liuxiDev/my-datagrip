@@ -928,4 +928,202 @@ public class DatabaseService {
             return false;
         }
     }
+
+    /**
+     * 获取数据库列表
+     * @param config 连接配置
+     * @return 数据库列表
+     */
+    public static List<String> getDatabases(ConnectionConfig config) {
+        List<String> databases = new ArrayList<>();
+        
+        try {
+            if ("mysql".equalsIgnoreCase(config.getDatabaseType())) {
+                Map<String, Object> result = executeQuery(config, "SHOW DATABASES");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    for (List<Object> row : data) {
+                        if (row != null && !row.isEmpty() && row.get(0) != null) {
+                            databases.add(row.get(0).toString());
+                        }
+                    }
+                }
+            } else if ("postgresql".equalsIgnoreCase(config.getDatabaseType())) {
+                Map<String, Object> result = executeQuery(config, "SELECT datname FROM pg_database WHERE datistemplate = false");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    for (List<Object> row : data) {
+                        if (row != null && !row.isEmpty() && row.get(0) != null) {
+                            databases.add(row.get(0).toString());
+                        }
+                    }
+                }
+            } else if ("sqlserver".equalsIgnoreCase(config.getDatabaseType())) {
+                Map<String, Object> result = executeQuery(config, "SELECT name FROM sys.databases");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    for (List<Object> row : data) {
+                        if (row != null && !row.isEmpty() && row.get(0) != null) {
+                            databases.add(row.get(0).toString());
+                        }
+                    }
+                }
+            } else if ("oracle".equalsIgnoreCase(config.getDatabaseType())) {
+                Map<String, Object> result = executeQuery(config, "SELECT username FROM all_users ORDER BY username");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    for (List<Object> row : data) {
+                        if (row != null && !row.isEmpty() && row.get(0) != null) {
+                            databases.add(row.get(0).toString());
+                        }
+                    }
+                }
+            } else if ("sqlite".equalsIgnoreCase(config.getDatabaseType())) {
+                databases.add("main"); // SQLite只有一个主数据库
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        return databases;
+    }
+
+    /**
+     * 获取数据库统计信息
+     * @param config 连接配置
+     * @return 统计信息键值对
+     */
+    public static Map<String, String> getDatabaseStats(ConnectionConfig config) {
+        Map<String, String> stats = new HashMap<>();
+        
+        try {
+            stats.put("数据库类型", config.getDatabaseType());
+            stats.put("主机", config.getHost());
+            stats.put("端口", String.valueOf(config.getPort()));
+            stats.put("数据库名", config.getDatabase());
+            stats.put("状态", "已连接");
+            
+            // 获取表数量
+            if ("mysql".equalsIgnoreCase(config.getDatabaseType())) {
+                Map<String, Object> result = executeQuery(config, 
+                        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '" + config.getDatabase() + "'");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("表数量", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取版本信息
+                result = executeQuery(config, "SELECT VERSION()");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("服务器版本", data.get(0).get(0).toString());
+                    }
+                }
+            } else if ("postgresql".equalsIgnoreCase(config.getDatabaseType())) {
+                Map<String, Object> result = executeQuery(config, 
+                        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog', 'information_schema')");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("表数量", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取版本信息
+                result = executeQuery(config, "SELECT version()");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("服务器版本", data.get(0).get(0).toString());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            stats.put("错误", e.getMessage());
+        }
+        
+        return stats;
+    }
+
+    /**
+     * 获取表的主键列
+     * @param config 连接配置
+     * @param tableName 表名
+     * @return 主键列名列表
+     */
+    public static List<String> getPrimaryKeys(ConnectionConfig config, String tableName) {
+        List<String> primaryKeys = new ArrayList<>();
+        
+        try {
+            if ("mysql".equalsIgnoreCase(config.getDatabaseType())) {
+                // 从tableName中提取schema和表名
+                String schema = null;
+                String table = tableName;
+                
+                if (tableName.contains(".")) {
+                    String[] parts = tableName.split("\\.");
+                    schema = parts[0];
+                    table = parts[1];
+                }
+                
+                String sql = "SHOW KEYS FROM " + tableName + " WHERE Key_name = 'PRIMARY'";
+                Map<String, Object> result = executeQuery(config, sql);
+                
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    List<String> columns = (List<String>) result.get("columns");
+                    
+                    int columnNameIndex = columns.indexOf("Column_name");
+                    if (columnNameIndex >= 0) {
+                        for (List<Object> row : data) {
+                            primaryKeys.add(row.get(columnNameIndex).toString());
+                        }
+                    }
+                }
+            } else if ("postgresql".equalsIgnoreCase(config.getDatabaseType())) {
+                // 从tableName中提取schema和表名
+                String schema = "public";
+                String table = tableName;
+                
+                if (tableName.contains(".")) {
+                    String[] parts = tableName.split("\\.");
+                    schema = parts[0];
+                    table = parts[1];
+                }
+                
+                String sql = "SELECT a.attname " +
+                        "FROM pg_index i " +
+                        "JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey) " +
+                        "WHERE i.indrelid = '" + table + "'::regclass AND i.indisprimary";
+                
+                Map<String, Object> result = executeQuery(config, sql);
+                
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    for (List<Object> row : data) {
+                        if (!row.isEmpty()) {
+                            primaryKeys.add(row.get(0).toString());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+        return primaryKeys;
+    }
+
+    /**
+     * 连接数据库
+     * @param config 连接配置
+     * @return 是否连接成功
+     */
+    public static boolean connect(ConnectionConfig config) {
+        return testConnection(config);
+    }
 } 

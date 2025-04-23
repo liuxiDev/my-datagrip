@@ -355,51 +355,54 @@ public class ConnectionDialog extends JDialog {
      * 加载连接数据到表单
      */
     private void loadConnectionData() {
-        if (connectionConfig.getName() != null) {
-            nameField.setText(connectionConfig.getName());
-        }
+        isUpdatingFields = true;
         
-        if (connectionConfig.getDatabaseType() != null) {
-            String type = connectionConfig.getDatabaseType().toLowerCase();
+        // 如果是编辑连接，则加载已有数据
+        if (!isNewConnection && connectionConfig != null) {
+            // 设置连接名称
+            nameField.setText(connectionConfig.getName());
+            
+            // 设置数据库类型
+            String dbType = connectionConfig.getDatabaseType();
             for (int i = 0; i < databaseTypeCombo.getItemCount(); i++) {
-                if (databaseTypeCombo.getItemAt(i).toLowerCase().contains(type)) {
+                if (databaseTypeCombo.getItemAt(i).toString().equalsIgnoreCase(dbType)) {
                     databaseTypeCombo.setSelectedIndex(i);
                     break;
                 }
             }
-        }
-        
-        if (connectionConfig.getHost() != null) {
+            
+            // 设置主机和端口
             hostField.setText(connectionConfig.getHost());
-        }
-        
-        if (connectionConfig.getPort() > 0) {
             portField.setText(String.valueOf(connectionConfig.getPort()));
-        } else {
-            String type = connectionConfig.getDatabaseType();
-            if (type != null && DEFAULT_PORTS.containsKey(type.toLowerCase())) {
-                portField.setText(String.valueOf(DEFAULT_PORTS.get(type.toLowerCase())));
-            }
-        }
-        
-        if (connectionConfig.getDatabase() != null) {
+            
+            // 设置数据库名
             databaseField.setText(connectionConfig.getDatabase());
-        }
-        
-        if (connectionConfig.getUsername() != null) {
+            
+            // 设置用户名和密码
             usernameField.setText(connectionConfig.getUsername());
-        }
-        
-        if (connectionConfig.getPassword() != null) {
             passwordField.setText(connectionConfig.getPassword());
+            
+            // 设置连接URL
+            urlArea.setText(connectionConfig.getUrl());
+            
+            // 根据数据库类型更新UI
+            updateUIForDatabaseType(dbType.toLowerCase());
+        } else {
+            // 新连接，设置默认值
+            nameField.setText("");
+            databaseTypeCombo.setSelectedIndex(0);
+            hostField.setText("localhost");
+            portField.setText("3306");
+            databaseField.setText("");
+            usernameField.setText("root");
+            passwordField.setText("");
+            urlArea.setText("");
+            
+            // 更新UI
+            updateUIForDatabaseType("mysql");
         }
         
-        updateConnectionConfig();
-        
-        // 更新UI
-        updateUIForDatabaseType(connectionConfig.getDatabaseType() != null 
-                ? connectionConfig.getDatabaseType().toLowerCase() 
-                : "mysql");
+        isUpdatingFields = false;
     }
     
     /**
