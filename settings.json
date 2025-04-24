@@ -1,11 +1,1 @@
-{
-  "isDarkTheme" : true,
-  "fontSizeFactor" : 1.0,
-  "fontSizeValue" : 14,
-  "security" : {
-    "encryptEnabled" : true,
-    "algorithm" : "AES",
-    "keyStrength" : "128位",
-    "secretKeyBytes" : "+iQYNsWu6Q+opohPe14Fyw=="
-  }
-}
+{"isDarkTheme":true,"fontSizeFactor":1.0,"fontSizeValue":14,"security":{"encryptEnabled":true,"algorithm":"AES","keyStrength":"128位","secretKeyBytes":"+iQYNsWu6Q+opohPe14Fyw=="}}

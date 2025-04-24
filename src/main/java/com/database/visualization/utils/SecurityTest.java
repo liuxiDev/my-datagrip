@@ -2,7 +2,6 @@ package com.database.visualization.utils;
 
 import com.database.visualization.model.ConnectionConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
 
 /**
  * 安全功能测试类

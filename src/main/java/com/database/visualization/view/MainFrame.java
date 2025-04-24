@@ -1,3 +1,4 @@
+package com.database.visualization.view;/*
 package com.database.visualization.view;
 
 import com.database.visualization.controller.DatabaseService;
@@ -27,19 +28,20 @@ import java.awt.event.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
+*/
 /**
  * 主窗口
- */
+ *//*
+
 public class MainFrame extends JFrame {
     private JTree databaseTree;
     private JTextArea sqlTextArea;
@@ -103,9 +105,11 @@ public class MainFrame extends JFrame {
         });
     }
 
-    /**
+    */
+/**
      * 调整组件高度以适应窗口大小
-     */
+     *//*
+
     private void adjustComponentsHeight() {
         // 获取窗口内容面板的高度
         int contentHeight = getContentPane().getHeight();
@@ -681,7 +685,7 @@ public class MainFrame extends JFrame {
                                     // 重置到第一页
                                     currentPage = 1;
                                     pageField.setText("1");
-                                    
+
                                     // 设置SQL并执行查询
                                     String sql = String.format("SELECT * FROM %s.%s", dbName, tableName);
                                     sqlTextArea.setText(sql);
@@ -695,9 +699,11 @@ public class MainFrame extends JFrame {
         });
     }
 
-    /**
+    */
+/**
      * 处理树节点选择事件
-     */
+     *//*
+
     private void handleTreeSelection(TreeSelectionEvent e) {
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) databaseTree.getLastSelectedPathComponent();
         if (node == null) return;
@@ -765,9 +771,11 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 加载数据库中的表
-     */
+     *//*
+
     private void loadDatabaseTables(ConnectionConfig config, String dbName, DefaultMutableTreeNode parentNode) {
         if (!currentConnection.getDatabase().equals(dbName)) {
             currentConnection.setDatabase(dbName);
@@ -819,9 +827,11 @@ public class MainFrame extends JFrame {
         worker.execute();
     }
 
-    /**
+    */
+/**
      * 加载所有连接
-     */
+     *//*
+
     private void loadConnections() {
         rootNode.removeAllChildren();
 
@@ -838,9 +848,11 @@ public class MainFrame extends JFrame {
         treeModel.reload();
     }
 
-    /**
+    */
+/**
      * 创建分页控制面板
-     */
+     *//*
+
     private JPanel createPaginationPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
@@ -930,12 +942,14 @@ public class MainFrame extends JFrame {
         return panel;
     }
 
-    /**
+    */
+/**
      * 将查询结果导出为CSV文件
      *
      * @param filePath 文件路径
      * @throws Exception 导出异常
-     */
+     *//*
+
     private void exportResultsToCsv(String filePath) throws Exception {
         if (resultTableModel == null || resultTableModel.getRowCount() == 0) {
             throw new Exception("没有可导出的数据");
@@ -977,12 +991,14 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 将查询结果导出为Excel文件
      *
      * @param filePath 文件路径
      * @throws Exception 导出异常
-     */
+     *//*
+
     private void exportResultsToExcel(String filePath) throws Exception {
         if (resultTableModel == null || resultTableModel.getRowCount() == 0) {
             throw new Exception("没有可导出的数据");
@@ -1036,9 +1052,11 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 设置应用程序主题颜色
-     */
+     *//*
+
     private void setApplicationTheme() {
         if (com.database.visualization.DataBaseVisualizer.isDarkTheme) {
             // 深色主题
@@ -1320,9 +1338,11 @@ public class MainFrame extends JFrame {
         SwingUtilities.updateComponentTreeUI(this);
     }
 
-    /**
+    */
+/**
      * 更新全局字体大小
-     */
+     *//*
+
     private void updateGlobalFontSize() {
         float factor = com.database.visualization.DataBaseVisualizer.fontSizeFactor;
 
@@ -1366,9 +1386,11 @@ public class MainFrame extends JFrame {
         SwingUtilities.updateComponentTreeUI(this);
     }
 
-    /**
+    */
+/**
      * 刷新数据库树
-     */
+     *//*
+
     private void refreshDatabaseTree() {
         // 保存当前选中的路径
         TreePath selectedPath = databaseTree.getSelectionPath();
@@ -1467,9 +1489,11 @@ public class MainFrame extends JFrame {
         worker.execute();
     }
 
-    /**
+    */
+/**
      * 执行SQL
-     */
+     *//*
+
     private void executeSQL() {
         String sql = sqlTextArea.getText().trim();
         if (sql.isEmpty()) {
@@ -1480,9 +1504,11 @@ public class MainFrame extends JFrame {
         executeSQL(sql);
     }
 
-    /**
+    */
+/**
      * 执行SQL语句
-     */
+     *//*
+
     private void executeSQL(String sql) {
         if (currentConnection == null) {
             JOptionPane.showMessageDialog(this, "请先选择一个数据库连接", "错误", JOptionPane.ERROR_MESSAGE);
@@ -1497,9 +1523,11 @@ public class MainFrame extends JFrame {
         executeSQLInternal(sql);
     }
 
-    /**
+    */
+/**
      * 执行当前查询（分页）
-     */
+     *//*
+
     private void executeCurrentQuery() {
         String sql = sqlTextArea.getText().trim();
         if (sql.isEmpty() || currentConnection == null) {
@@ -1521,9 +1549,11 @@ public class MainFrame extends JFrame {
         executeSQLInternal(paginatedSql);
     }
 
-    /**
+    */
+/**
      * 内部执行SQL的实现
-     */
+     *//*
+
     private void executeSQLInternal(String sql) {
         statusLabel.setText("执行SQL: " + (sql.length() > 50 ? sql.substring(0, 50) + "..." : sql));
 
@@ -1631,11 +1661,13 @@ public class MainFrame extends JFrame {
         worker.execute();
     }
 
-    /**
+    */
+/**
      * 从SQL中提取表名并获取主键
      *
      * @param sql SQL语句
-     */
+     *//*
+
     private void extractTableNameAndFetchPrimaryKeys(String sql) {
         try {
             // 简单的表名提取逻辑，可能需要更复杂的解析器
@@ -1687,18 +1719,22 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 更新分页信息
-     */
+     *//*
+
     private void updatePaginationInfo() {
         totalPagesLabel.setText("共 " + totalPages + " 页, 共 " + totalRecords + " 条记录");
         prevPageButton.setEnabled(currentPage > 1);
         nextPageButton.setEnabled(currentPage < totalPages);
     }
 
-    /**
+    */
+/**
      * 添加新连接
-     */
+     *//*
+
     private void addNewConnection() {
         ConnectionDialog dialog = new ConnectionDialog(this, null, true);
         dialog.setVisible(true);
@@ -1716,9 +1752,11 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 导入连接配置
-     */
+     *//*
+
     private void importConnections() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("导入连接配置");
@@ -1730,9 +1768,11 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 从文件导入连接配置
-     */
+     *//*
+
     private void importConnectionsFromFile(String filePath) {
         try {
             // 使用ConnectionManager导入连接
@@ -1760,9 +1800,11 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 导出连接配置
-     */
+     *//*
+
     private void exportConnections() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("导出连接配置");
@@ -1778,9 +1820,11 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 导出连接配置到文件
-     */
+     *//*
+
     private void exportConnectionsToFile(String filePath) {
         try {
             // 获取所有连接配置
@@ -1801,9 +1845,11 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 格式化SQL
-     */
+     *//*
+
     private void formatSQL() {
         String sql = sqlTextArea.getText().trim();
         if (sql.isEmpty()) {
@@ -1815,56 +1861,75 @@ public class MainFrame extends JFrame {
         sqlTextArea.setText(formattedSql);
     }
 
-    /**
+    */
+/**
      * 显示性能监控对话框
-     */
+     *//*
+
     private void showMonitoringDialog() {
-        JDialog dialog = new JDialog(this, "性能监控", true);
-        dialog.setSize(600, 450);
-        dialog.setLocationRelativeTo(this);
-
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        JPanel statsPanel = new JPanel(new GridLayout(0, 1, 5, 5));
-
-        // 如果当前连接有效，则获取性能统计
-        if (currentConnection != null) {
-            try {
-                Map<String, String> stats = DatabaseService.getDatabaseStats(currentConnection);
-
-                for (Map.Entry<String, String> entry : stats.entrySet()) {
-                    addStatItem(statsPanel, entry.getKey(), entry.getValue());
-                }
-            } catch (Exception e) {
-                statsPanel.add(new JLabel("获取性能统计信息失败: " + e.getMessage()));
-            }
-        } else {
-            statsPanel.add(new JLabel("请先连接到数据库"));
-        }
-
-        JScrollPane scrollPane = new JScrollPane(statsPanel);
-        panel.add(scrollPane, BorderLayout.CENTER);
-
-        JButton closeButton = new JButton("关闭");
-        closeButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dialog.dispose();
-            }
-        });
-
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.add(closeButton);
-        panel.add(buttonPanel, BorderLayout.SOUTH);
-
-        dialog.setContentPane(panel);
+        // 创建并显示新的监控对话框
+        MonitoringDialog dialog = new MonitoringDialog(this, currentConnection);
         dialog.setVisible(true);
     }
 
-    /**
+
+    */
+/**
+     * 删除数据库
+     *//*
+
+    private void dropDatabase(ConnectionConfig config, String dbName) {
+        if (JOptionPane.showConfirmDialog(this,
+                "确定要删除数据库 " + dbName + " 吗？此操作不可逆！",
+                "确认删除", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+
+            currentConnection = config;
+            String sql = "DROP DATABASE " + dbName;
+
+            // 执行SQL
+            Map<String, Object> result = DatabaseService.executeUpdate(currentConnection, sql);
+            if ((boolean) result.get("success")) {
+                JOptionPane.showMessageDialog(this,
+                        "数据库 " + dbName + " 已成功删除！",
+                        "删除成功",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+                // 刷新数据库树
+                refreshDatabaseTree();
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "删除数据库失败: " + result.get("error"),
+                        "删除失败",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    */
+/**
+     * 创建新表
+     *//*
+
+    private void createNewTable(ConnectionConfig config, String schemaName) {
+        // 弹出创建表对话框
+        CreateTableDialog dialog = new CreateTableDialog(this, schemaName);
+        dialog.setVisible(true);
+
+        if (dialog.isConfirmed()) {
+            currentConnection = config;
+            String sql = dialog.getCreateTableSQL();
+            if (sql != null && !sql.trim().isEmpty()) {
+                executeSQL(sql);
+                refreshDatabaseTree();
+            }
+        }
+    }
+
+    */
+/**
      * 添加统计项
-     */
+     *//*
+
     private void addStatItem(JPanel panel, String name, String value) {
         JPanel itemPanel = new JPanel(new BorderLayout());
         itemPanel.add(new JLabel(name + ": "), BorderLayout.WEST);
@@ -1872,9 +1937,11 @@ public class MainFrame extends JFrame {
         panel.add(itemPanel);
     }
 
-    /**
+    */
+/**
      * 显示安全设置对话框
-     */
+     *//*
+
     private void showSecurityDialog() {
         JDialog dialog = new JDialog(this, "安全设置", true);
         dialog.setSize(400, 300);
@@ -1936,10 +2003,10 @@ public class MainFrame extends JFrame {
                 boolean encryptEnabled = encryptPasswordCheckbox.isSelected();
                 String algorithm = (String) algorithmCombo.getSelectedItem();
                 String keyStrength = (String) strengthCombo.getSelectedItem();
-                
+
                 com.database.visualization.utils.SecurityManager.updateSecuritySettings(
                     encryptEnabled, algorithm, keyStrength);
-                    
+
                 JOptionPane.showMessageDialog(dialog, "安全设置已保存");
                 dialog.dispose();
             }
@@ -1961,9 +2028,11 @@ public class MainFrame extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
+    */
+/**
      * 显示树节点的右键菜单
-     */
+     *//*
+
     private void showTreeNodeContextMenu(DefaultMutableTreeNode node, int x, int y) {
         if (node == null) return;
 
@@ -2023,9 +2092,11 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 连接数据库
-     */
+     *//*
+
     private void connectDatabase(ConnectionConfig config) {
         // 创建SwingWorker在后台线程中连接数据库
         SwingWorker<Boolean, Void> worker = new SwingWorker<Boolean, Void>() {
@@ -2061,85 +2132,136 @@ public class MainFrame extends JFrame {
         worker.execute();
     }
 
-    /**
-     * 创建数据编辑控制面板
-     */
-    private JPanel createDataEditPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
-        panel.setBackground(new Color(60, 63, 65));
+    */
+/**
+     * 显示表上下文菜单
+     *//*
 
-        JCheckBox editableCheckBox = new JCheckBox("启用编辑");
-        editableCheckBox.setForeground(new Color(187, 187, 187));
-        editableCheckBox.setBackground(new Color(60, 63, 65));
+    private void showSchemaTableContextMenu(ConnectionConfig config, String schemaName, String tableName, int x, int y) {
+        JPopupMenu menu = new JPopupMenu();
 
-        addRowButton = new JButton("添加行");
-        addRowButton.setBackground(new Color(60, 63, 65));
-        addRowButton.setForeground(new Color(187, 187, 187));
-        addRowButton.setEnabled(false);
+        JMenuItem queryItem = new JMenuItem("查询数据");
+        JMenuItem structureItem = new JMenuItem("表结构");
+        JMenuItem editItem = new JMenuItem("修改表");
+        JMenuItem dropItem = new JMenuItem("删除表");
+        JMenuItem emptyItem = new JMenuItem("清空表");
+        JMenuItem exportItem = new JMenuItem("导出数据");
 
-        deleteRowButton = new JButton("删除行");
-        deleteRowButton.setBackground(new Color(60, 63, 65));
-        deleteRowButton.setForeground(new Color(187, 187, 187));
-        deleteRowButton.setEnabled(false);
+        editItem.addActionListener(e -> {
+            showEditTableDialog(tableName);
+        });
 
-        submitChangesButton = new JButton("提交更改");
-        submitChangesButton.setBackground(new Color(60, 63, 65));
-        submitChangesButton.setForeground(new Color(187, 187, 187));
-        submitChangesButton.setEnabled(false);
-
-        // 添加监听器
-        editableCheckBox.addActionListener(e -> {
-            isDataEditable = editableCheckBox.isSelected();
-            resultTableModel.setEditable(isDataEditable);
-            addRowButton.setEnabled(isDataEditable);
-            deleteRowButton.setEnabled(isDataEditable);
-            submitChangesButton.setEnabled(isDataEditable);
-
-            if (isDataEditable && currentTableName != null) {
-                // 获取表的主键信息，用于编辑时生成更新语句
-                fetchTablePrimaryKeys(currentTableName);
+        dropItem.addActionListener(e -> {
+            if (JOptionPane.showConfirmDialog(this,
+                    "确定要删除表 " + tableName + " 吗？此操作不可逆！",
+                    "确认删除", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+                executeSQL("DROP TABLE " + tableName);
+                refreshDatabaseTree();
             }
         });
 
-        addRowButton.addActionListener(e -> {
-            // 添加新行
-            resultTableModel.addRow();
+        emptyItem.addActionListener(e -> {
+            if (JOptionPane.showConfirmDialog(this,
+                    "确定要清空表 " + tableName + " 的所有数据吗？此操作不可逆！",
+                    "确认清空", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+                executeSQL("TRUNCATE TABLE " + tableName);
+            }
+        });
+        queryItem.addActionListener(e -> {
+            currentConnection = config;
+            String sql = "SELECT * FROM " + schemaName + "." + tableName + " LIMIT 100";
+            sqlTextArea.setText(sql);
+            executeSQL();
+        });
 
-            // 记录修改
-            int rowCount = resultTableModel.getRowCount();
-            if (rowCount > 0) {
-                modifiedRows.add(Integer.valueOf(rowCount - 1));
+        structureItem.addActionListener(e -> {
+            currentConnection = config;
+            showTableStructure(schemaName + "." + tableName);
+        });
+
+        exportItem.addActionListener(e -> {
+            // 导出数据逻辑
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("导出数据");
+            fileChooser.setFileFilter(new FileNameExtensionFilter("CSV文件", "csv"));
+
+            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getPath();
+                if (!filePath.endsWith(".csv")) {
+                    filePath += ".csv";
+                }
+
+                try {
+                    // 先查询数据
+                    currentConnection = config;
+                    String sql = "SELECT * FROM " + schemaName + "." + tableName;
+                    Map<String, Object> result = DatabaseService.executeQuery(currentConnection, sql);
+
+                    if ((boolean) result.get("success")) {
+                        List<List<Object>> data = (List<List<Object>>) result.get("data");
+                        List<String> columns = (List<String>) result.get("columns");
+
+                        // 导出到CSV
+                        try (FileWriter writer = new FileWriter(filePath)) {
+                            // 写入表头
+                            for (int i = 0; i < columns.size(); i++) {
+                                writer.append(columns.get(i));
+                                if (i < columns.size() - 1) {
+                                    writer.append(",");
+                                }
+                            }
+                            writer.append("\n");
+
+                            // 写入数据
+                            for (List<Object> row : data) {
+                                for (int i = 0; i < row.size(); i++) {
+                                    Object value = row.get(i);
+                                    String cell = value == null ? "" : value.toString();
+
+                                    // 对包含逗号、引号、换行符的单元格进行处理
+                                    if (cell.contains(",") || cell.contains("\"") || cell.contains("\n")) {
+                                        cell = "\"" + cell.replace("\"", "\"\"") + "\"";
+                                    }
+
+                                    writer.append(cell);
+                                    if (i < row.size() - 1) {
+                                        writer.append(",");
+                                    }
+                                }
+                                writer.append("\n");
+                            }
+
+                            JOptionPane.showMessageDialog(this, "导出成功", "导出数据", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(this, "查询失败: " + result.get("error"), "错误", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "导出失败: " + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 
-        deleteRowButton.addActionListener(e -> {
-            int selectedRow = resultTable.getSelectedRow();
-            if (selectedRow != -1) {
-                // 记录要删除的行
-                modifiedRows.add(Integer.valueOf(selectedRow));
+        menu.add(queryItem);
+        menu.add(structureItem);
+        menu.addSeparator();
+        menu.add(editItem);
+        menu.add(dropItem);
+        menu.add(emptyItem);
+        menu.addSeparator();
+        menu.add(exportItem);
 
-                // 标记为删除
-                resultTableModel.markRowAsDeleted(selectedRow);
-            }
-        });
 
-        submitChangesButton.addActionListener(e -> {
-            // 保存修改
-            saveTableChanges();
-        });
-
-        panel.add(editableCheckBox);
-        panel.add(addRowButton);
-        panel.add(deleteRowButton);
-        panel.add(submitChangesButton);
-
-        return panel;
+        menu.show(databaseTree, x, y);
     }
 
-    /**
+
+    */
+/**
      * 保存表格更改
-     */
+     *//*
+
     private void saveTableChanges() {
         if (currentConnection == null || currentTableName == null) {
             statusLabel.setText("没有可保存的更改");
@@ -2268,9 +2390,11 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 生成更新SQL语句
-     */
+     *//*
+
     private String generateUpdateSQL(int row) {
         if (currentTableName == null || primaryKeys.isEmpty()) return null;
 
@@ -2347,9 +2471,11 @@ public class MainFrame extends JFrame {
         return sql.toString();
     }
 
-    /**
+    */
+/**
      * 生成插入SQL语句
-     */
+     *//*
+
     private String generateInsertSQL(int row) {
         if (currentTableName == null) return null;
 
@@ -2399,9 +2525,11 @@ public class MainFrame extends JFrame {
         return sql.toString();
     }
 
-    /**
+    */
+/**
      * 生成删除SQL语句
-     */
+     *//*
+
     private String generateDeleteSQL(int row) {
         if (currentTableName == null || primaryKeys.isEmpty()) return null;
 
@@ -2434,9 +2562,11 @@ public class MainFrame extends JFrame {
         return sql.toString();
     }
 
-    /**
+    */
+/**
      * 获取表的主键信息
-     */
+     *//*
+
     private void fetchTablePrimaryKeys(String tableName) {
         SwingWorker<List<String>, Void> worker = new SwingWorker<List<String>, Void>() {
             @Override
@@ -2465,9 +2595,11 @@ public class MainFrame extends JFrame {
         worker.execute();
     }
 
-    /**
+    */
+/**
      * 显示表结构
-     */
+     *//*
+
     private void showTableStructure(String tableName) {
         if (currentConnection == null) {
             JOptionPane.showMessageDialog(this, "请先连接数据库", "错误", JOptionPane.ERROR_MESSAGE);
@@ -2588,9 +2720,11 @@ public class MainFrame extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
+    */
+/**
      * 显示添加列对话框
-     */
+     *//*
+
     private void showAddColumnDialog(String tableName) {
         // 创建对话框
         JDialog dialog = new JDialog(this, "添加列到 " + tableName, true);
@@ -2738,9 +2872,11 @@ public class MainFrame extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
+    */
+/**
      * 显示编辑表对话框
-     */
+     *//*
+
     private void showEditTableDialog(String tableName) {
         // 创建对话框
         JDialog dialog = new JDialog(this, "编辑表: " + tableName, true);
@@ -2766,12 +2902,17 @@ public class MainFrame extends JFrame {
         Map<String, Object> result = DatabaseService.executeQuery(currentConnection, sql);
 
         if ((boolean) result.get("success")) {
-            List<Map<String, Object>> data = (List<Map<String, Object>>) result.get("data");
+            // 使用安全的类型检查和转换
+            Object rawData = result.get("data");
             List<String> columns = (List<String>) result.get("columns");
 
             // 创建表格模型
             QueryResultTableModel model = new QueryResultTableModel(false);
-            model.setDataFromMap(data, columns);
+
+            // 根据数据类型调用适当的方法
+            if (rawData instanceof List) {
+                model.setDataFromMap((List<?>) rawData, columns);
+            }
 
             // 创建表格
             JTable table = new JTable(model);
@@ -2855,9 +2996,11 @@ public class MainFrame extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
+    */
+/**
      * 显示连接上下文菜单
-     */
+     *//*
+
     private void showConnectionContextMenu(ConnectionConfig config, int x, int y) {
         JPopupMenu menu = new JPopupMenu();
 
@@ -2904,9 +3047,11 @@ public class MainFrame extends JFrame {
         menu.show(databaseTree, x, y);
     }
 
-    /**
+    */
+/**
      * 显示数据库/schema上下文菜单
-     */
+     *//*
+
     private void showSchemaContextMenu(ConnectionConfig config, String schemaName, int x, int y) {
         JPopupMenu menu = new JPopupMenu();
 
@@ -2952,11 +3097,11 @@ public class MainFrame extends JFrame {
             currentConnection = config;
             executeSQL();
         });
-        
+
         exportSqlItem.addActionListener(e -> {
             exportDatabaseSql(config, schemaName);
         });
-        
+
         batchExecuteSqlItem.addActionListener(e -> {
             batchExecuteSql(config, schemaName);
         });
@@ -2976,9 +3121,11 @@ public class MainFrame extends JFrame {
         menu.show(databaseTree, x, y);
     }
 
-    /**
+    */
+/**
      * 修改数据库
-     */
+     *//*
+
     private void alterDatabase(ConnectionConfig config, String dbName) {
         // 检查是否是MySQL数据库，只有MySQL支持修改字符集和排序规则
         if (!"mysql".equalsIgnoreCase(config.getDatabaseType())) {
@@ -3161,9 +3308,51 @@ public class MainFrame extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
+
+    */
+/**
+     * 更新排序规则下拉框
+     *//*
+
+    private void updateCollations(String charset, JComboBox<String> collationCombo) {
+        collationCombo.removeAllItems();
+
+        // 为不同字符集添加适合的排序规则
+        switch (charset) {
+            case "utf8mb4":
+                collationCombo.addItem("utf8mb4_general_ci");
+                collationCombo.addItem("utf8mb4_unicode_ci");
+                collationCombo.addItem("utf8mb4_bin");
+                collationCombo.addItem("utf8mb4_0900_ai_ci");
+                break;
+            case "utf8":
+                collationCombo.addItem("utf8_general_ci");
+                collationCombo.addItem("utf8_unicode_ci");
+                collationCombo.addItem("utf8_bin");
+                break;
+            case "latin1":
+                collationCombo.addItem("latin1_swedish_ci");
+                collationCombo.addItem("latin1_general_ci");
+                collationCombo.addItem("latin1_bin");
+                break;
+            case "gbk":
+                collationCombo.addItem("gbk_chinese_ci");
+                collationCombo.addItem("gbk_bin");
+                break;
+            case "ascii":
+                collationCombo.addItem("ascii_general_ci");
+                collationCombo.addItem("ascii_bin");
+                break;
+            default:
+                collationCombo.addItem(charset + "_general_ci");
+        }
+    }
+
+    */
+/**
      * 创建新数据库
-     */
+     *//*
+
     private void createNewDatabase(ConnectionConfig config) {
         // 创建弹出对话框
         JDialog dialog = new JDialog(this, "新建数据库", true);
@@ -3263,216 +3452,11 @@ public class MainFrame extends JFrame {
         dialog.setVisible(true);
     }
 
-    /**
-     * 更新排序规则下拉框
-     */
-    private void updateCollations(String charset, JComboBox<String> collationCombo) {
-        collationCombo.removeAllItems();
-
-        // 为不同字符集添加适合的排序规则
-        switch (charset) {
-            case "utf8mb4":
-                collationCombo.addItem("utf8mb4_general_ci");
-                collationCombo.addItem("utf8mb4_unicode_ci");
-                collationCombo.addItem("utf8mb4_bin");
-                collationCombo.addItem("utf8mb4_0900_ai_ci");
-                break;
-            case "utf8":
-                collationCombo.addItem("utf8_general_ci");
-                collationCombo.addItem("utf8_unicode_ci");
-                collationCombo.addItem("utf8_bin");
-                break;
-            case "latin1":
-                collationCombo.addItem("latin1_swedish_ci");
-                collationCombo.addItem("latin1_general_ci");
-                collationCombo.addItem("latin1_bin");
-                break;
-            case "gbk":
-                collationCombo.addItem("gbk_chinese_ci");
-                collationCombo.addItem("gbk_bin");
-                break;
-            case "ascii":
-                collationCombo.addItem("ascii_general_ci");
-                collationCombo.addItem("ascii_bin");
-                break;
-            default:
-                collationCombo.addItem(charset + "_general_ci");
-        }
-    }
-
-    /**
-     * 删除数据库
-     */
-    private void dropDatabase(ConnectionConfig config, String dbName) {
-        if (JOptionPane.showConfirmDialog(this,
-                "确定要删除数据库 " + dbName + " 吗？此操作不可逆！",
-                "确认删除", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-
-            currentConnection = config;
-            String sql = "DROP DATABASE " + dbName;
-
-            // 执行SQL
-            Map<String, Object> result = DatabaseService.executeUpdate(currentConnection, sql);
-            if ((boolean) result.get("success")) {
-                JOptionPane.showMessageDialog(this,
-                        "数据库 " + dbName + " 已成功删除！",
-                        "删除成功",
-                        JOptionPane.INFORMATION_MESSAGE);
-
-                // 刷新数据库树
-                refreshDatabaseTree();
-            } else {
-                JOptionPane.showMessageDialog(this,
-                        "删除数据库失败: " + result.get("error"),
-                        "删除失败",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
-    /**
-     * 创建新表
-     */
-    private void createNewTable(ConnectionConfig config, String schemaName) {
-        // 弹出创建表对话框
-        CreateTableDialog dialog = new CreateTableDialog(this, schemaName);
-        dialog.setVisible(true);
-
-        if (dialog.isConfirmed()) {
-            currentConnection = config;
-            String sql = dialog.getCreateTableSQL();
-            if (sql != null && !sql.trim().isEmpty()) {
-                executeSQL(sql);
-                refreshDatabaseTree();
-            }
-        }
-    }
-
-    /**
-     * 显示表上下文菜单
-     */
-    private void showSchemaTableContextMenu(ConnectionConfig config, String schemaName, String tableName, int x, int y) {
-        JPopupMenu menu = new JPopupMenu();
-
-        JMenuItem queryItem = new JMenuItem("查询数据");
-        JMenuItem structureItem = new JMenuItem("表结构");
-        JMenuItem editItem = new JMenuItem("修改表");
-        JMenuItem dropItem = new JMenuItem("删除表");
-        JMenuItem emptyItem = new JMenuItem("清空表");
-        JMenuItem exportItem = new JMenuItem("导出数据");
-
-        editItem.addActionListener(e -> {
-            showEditTableDialog(tableName);
-        });
-
-        dropItem.addActionListener(e -> {
-            if (JOptionPane.showConfirmDialog(this,
-                    "确定要删除表 " + tableName + " 吗？此操作不可逆！",
-                    "确认删除", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-                executeSQL("DROP TABLE " + tableName);
-                refreshDatabaseTree();
-            }
-        });
-
-        emptyItem.addActionListener(e -> {
-            if (JOptionPane.showConfirmDialog(this,
-                    "确定要清空表 " + tableName + " 的所有数据吗？此操作不可逆！",
-                    "确认清空", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-                executeSQL("TRUNCATE TABLE " + tableName);
-            }
-        });
-        queryItem.addActionListener(e -> {
-            currentConnection = config;
-            String sql = "SELECT * FROM " + schemaName + "." + tableName + " LIMIT 100";
-            sqlTextArea.setText(sql);
-            executeSQL();
-        });
-
-        structureItem.addActionListener(e -> {
-            currentConnection = config;
-            showTableStructure(schemaName + "." + tableName);
-        });
-
-        exportItem.addActionListener(e -> {
-            // 导出数据逻辑
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("导出数据");
-            fileChooser.setFileFilter(new FileNameExtensionFilter("CSV文件", "csv"));
-
-            if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-                String filePath = fileChooser.getSelectedFile().getPath();
-                if (!filePath.endsWith(".csv")) {
-                    filePath += ".csv";
-                }
-
-                try {
-                    // 先查询数据
-                    currentConnection = config;
-                    String sql = "SELECT * FROM " + schemaName + "." + tableName;
-                    Map<String, Object> result = DatabaseService.executeQuery(currentConnection, sql);
-
-                    if ((boolean) result.get("success")) {
-                        List<List<Object>> data = (List<List<Object>>) result.get("data");
-                        List<String> columns = (List<String>) result.get("columns");
-
-                        // 导出到CSV
-                        try (FileWriter writer = new FileWriter(filePath)) {
-                            // 写入表头
-                            for (int i = 0; i < columns.size(); i++) {
-                                writer.append(columns.get(i));
-                                if (i < columns.size() - 1) {
-                                    writer.append(",");
-                                }
-                            }
-                            writer.append("\n");
-
-                            // 写入数据
-                            for (List<Object> row : data) {
-                                for (int i = 0; i < row.size(); i++) {
-                                    Object value = row.get(i);
-                                    String cell = value == null ? "" : value.toString();
-
-                                    // 对包含逗号、引号、换行符的单元格进行处理
-                                    if (cell.contains(",") || cell.contains("\"") || cell.contains("\n")) {
-                                        cell = "\"" + cell.replace("\"", "\"\"") + "\"";
-                                    }
-
-                                    writer.append(cell);
-                                    if (i < row.size() - 1) {
-                                        writer.append(",");
-                                    }
-                                }
-                                writer.append("\n");
-                            }
-
-                            JOptionPane.showMessageDialog(this, "导出成功", "导出数据", JOptionPane.INFORMATION_MESSAGE);
-                        }
-                    } else {
-                        JOptionPane.showMessageDialog(this, "查询失败: " + result.get("error"), "错误", JOptionPane.ERROR_MESSAGE);
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                    JOptionPane.showMessageDialog(this, "导出失败: " + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
-
-        menu.add(queryItem);
-        menu.add(structureItem);
-        menu.addSeparator();
-        menu.add(editItem);
-        menu.add(dropItem);
-        menu.add(emptyItem);
-        menu.addSeparator();
-        menu.add(exportItem);
-
-
-        menu.show(databaseTree, x, y);
-    }
-
-    /**
+    */
+/**
      * 显示Redis数据库上下文菜单
-     */
+     *//*
+
     private void showRedisDatabaseContextMenu(ConnectionConfig config, String dbName, int x, int y) {
         JPopupMenu menu = new JPopupMenu();
 
@@ -3510,9 +3494,11 @@ public class MainFrame extends JFrame {
         menu.show(databaseTree, x, y);
     }
 
-    /**
+    */
+/**
      * 显示Redis类型上下文菜单
-     */
+     *//*
+
     private void showRedisTypeContextMenu(ConnectionConfig config, String dbName, String typeName, int x, int y) {
         JPopupMenu menu = new JPopupMenu();
 
@@ -3552,11 +3538,14 @@ public class MainFrame extends JFrame {
         menu.show(databaseTree, x, y);
     }
 
-    /**
+    */
+/**
      * 导出数据库SQL，包括表结构和数据
-     * @param config 数据库连接配置
+     *
+     * @param config     数据库连接配置
      * @param schemaName 模式名称
-     */
+     *//*
+
     private void exportDatabaseSql(ConnectionConfig config, String schemaName) {
         // Redis不支持SQL导出
         if (config.getDatabaseType().equalsIgnoreCase("redis")) {
@@ -3604,12 +3593,12 @@ public class MainFrame extends JFrame {
                         // 写入文件头部，包含数据库信息和导出时间
                         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                         String header = String.format("-- 导出自数据库: %s\n" +
-                                         "-- 数据库类型: %s\n" +
-                                         "-- 模式名称: %s\n" +
-                                         "-- 导出时间: %s\n\n",
+                                        "-- 数据库类型: %s\n" +
+                                        "-- 模式名称: %s\n" +
+                                        "-- 导出时间: %s\n\n",
                                 config.getName(), config.getDatabaseType(), schemaName, dateFormat.format(new Date()));
                         writer.write(header);
-                        
+
                         // 添加USE语句
                         writer.write(String.format("USE `%s`;\n\n", schemaName));
 
@@ -3630,10 +3619,10 @@ public class MainFrame extends JFrame {
                             // 导出表结构
                             writer.write("-- 表结构: " + tableName + "\n");
                             StringBuilder createTableSql = new StringBuilder("CREATE TABLE " + tableName + " (\n");
-                            
+
                             // 获取表列信息
                             List<Map<String, String>> columns = DatabaseService.getColumns(config, schemaName, tableName);
-                            
+
                             // 获取主键信息 - 对表名做处理，如果包含schema前缀需要去掉
                             String tableNameForPk = tableName;
                             if (tableName.contains(".")) {
@@ -3641,37 +3630,37 @@ public class MainFrame extends JFrame {
                                 tableNameForPk = parts[1];
                             }
                             List<String> primaryKeys = DatabaseService.getPrimaryKeys(config, tableNameForPk);
-                            
+
                             // 去除主键列表中的重复项
                             primaryKeys = getPrimaryKeys(primaryKeys);
 
                             // 标记表结构是否已写入文件
                             boolean tableWritten = false;
-                            
+
                             int columnCount = 0;
                             for (Map<String, String> column : columns) {
                                 if (columnCount > 0) {
                                     createTableSql.append(",\n");
                                 }
-                                
+
                                 String columnName = column.get("name");
                                 String typeName = column.get("type");
-                                
+
                                 if (columnName == null || typeName == null) {
                                     // 尝试使用不同的key - 可能是大写
                                     columnName = column.get("COLUMN_NAME");
                                     typeName = column.get("TYPE_NAME");
                                 }
-                                
+
                                 if (columnName == null || typeName == null) {
                                     // 如果仍然为null，使用默认值避免NullPointerException
                                     columnName = column.get("NAME") != null ? column.get("NAME") : "unknown_column";
                                     typeName = column.get("TYPE") != null ? column.get("TYPE") : "VARCHAR";
                                 }
-                                
+
                                 createTableSql.append("  ").append(columnName).append(" ")
-                                           .append(typeName);
-                                
+                                        .append(typeName);
+
                                 // 添加大小信息（如果有）
                                 String size = column.get("size");
                                 if (size == null) {
@@ -3680,32 +3669,32 @@ public class MainFrame extends JFrame {
                                 if (size == null) {
                                     size = column.get("SIZE");
                                 }
-                                
+
                                 if (size != null && !size.isEmpty()) {
                                     createTableSql.append("(").append(size).append(")");
                                 }
-                                
+
                                 // NOT NULL 约束
                                 String nullable = column.get("nullable");
                                 if (nullable == null) {
                                     nullable = column.get("IS_NULLABLE");
                                 }
-                                
+
                                 if ("NO".equals(nullable)) {
                                     createTableSql.append(" NOT NULL");
                                 }
-                                
+
                                 columnCount++;
                             }
-                            
+
                             // 添加主键约束
                             if (!primaryKeys.isEmpty()) {
                                 createTableSql.append(",\n  PRIMARY KEY (");
-                                
+
                                 // 去除主键列表中的重复项
                                 Set<String> uniquePrimaryKeysSe = new LinkedHashSet<>(primaryKeys);
                                 List<String> uniquePKList = new ArrayList<>(uniquePrimaryKeysSe);
-                                
+
                                 for (int p = 0; p < uniquePKList.size(); p++) {
                                     if (p > 0) {
                                         createTableSql.append(", ");
@@ -3714,18 +3703,18 @@ public class MainFrame extends JFrame {
                                 }
                                 createTableSql.append(")");
                             }
-                            
+
                             // 添加collate设置（针对MySQL）作为CREATE TABLE的一部分
                             if ("mysql".equalsIgnoreCase(config.getDatabaseType())) {
                                 // 尝试查询表的字符集和排序规则
                                 try {
                                     Map<String, Object> collateResult = DatabaseService.executeQuery(
-                                        config, 
-                                        "SELECT TABLE_COLLATION FROM information_schema.TABLES " +
-                                        "WHERE TABLE_SCHEMA = '" + schemaName + "' " +
-                                        "AND TABLE_NAME = '" + tableNameForPk + "'"
+                                            config,
+                                            "SELECT TABLE_COLLATION FROM information_schema.TABLES " +
+                                                    "WHERE TABLE_SCHEMA = '" + schemaName + "' " +
+                                                    "AND TABLE_NAME = '" + tableNameForPk + "'"
                                     );
-                                    
+
                                     if ((boolean) collateResult.get("success")) {
                                         List<List<Object>> collateData = (List<List<Object>>) collateResult.get("data");
                                         if (!collateData.isEmpty() && !collateData.get(0).isEmpty() && collateData.get(0).get(0) != null) {
@@ -3741,21 +3730,21 @@ public class MainFrame extends JFrame {
                                     System.err.println("获取表字符集失败: " + ex.getMessage());
                                 }
                             }
-                            
+
                             // 如果没有添加collate（非MySQL或查询失败），则正常结束CREATE TABLE语句
                             if (!tableWritten) {
                                 createTableSql.append("\n);\n\n");
                                 writer.write(createTableSql.toString());
                             }
-                            
+
                             // 导出表数据
                             writer.write("-- 表数据: " + tableName + "\n");
                             Map<String, Object> queryResult = DatabaseService.executeQuery(config, "SELECT * FROM " + tableName);
-                            
+
                             if ((boolean) queryResult.get("success")) {
                                 List<String> columnNames = (List<String>) queryResult.get("columns");
                                 List<List<Object>> rows = (List<List<Object>>) queryResult.get("data");
-                                
+
                                 for (List<Object> row : rows) {
                                     if (cancelled.get()) {
                                         break;
@@ -3771,7 +3760,7 @@ public class MainFrame extends JFrame {
                                             values.append(", ");
                                         }
                                         insertSql.append(columnNames.get(colIndex));
-                                        
+
                                         Object value = colIndex < row.size() ? row.get(colIndex) : null;
                                         if (value == null) {
                                             values.append("NULL");
@@ -3782,10 +3771,10 @@ public class MainFrame extends JFrame {
                                         } else {
                                             values.append(value);
                                         }
-                                        
+
                                         first = false;
                                     }
-                                    
+
                                     insertSql.append(") ");
                                     values.append(");");
                                     writer.write(insertSql.toString() + values.toString() + "\n");
@@ -3841,11 +3830,14 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 批量执行SQL语句
-     * @param config 数据库连接配置
+     *
+     * @param config     数据库连接配置
      * @param schemaName 模式名称
-     */
+     *//*
+
     private void batchExecuteSql(ConnectionConfig config, String schemaName) {
         // Redis不支持批量执行SQL
         if (config.getDatabaseType().equalsIgnoreCase("redis")) {
@@ -3890,12 +3882,12 @@ public class MainFrame extends JFrame {
             settingsDialog.setLocationRelativeTo(this);
 
             cancelButton.addActionListener(e -> settingsDialog.dispose());
-            
+
             executeButton.addActionListener(e -> {
                 int threads = (int) threadsSpinner.getValue();
                 int batchSize = (int) batchSizeSpinner.getValue();
                 settingsDialog.dispose();
-                
+
                 // 执行SQL批处理
                 executeSqlBatch(config, schemaName, filePath, threads, batchSize);
             });
@@ -3904,34 +3896,36 @@ public class MainFrame extends JFrame {
         }
     }
 
-    /**
+    */
+/**
      * 执行SQL文件批处理
-     */
+     *//*
+
     private void executeSqlBatch(ConnectionConfig config, String schemaName, String filePath, int threads, int batchSize) {
         // 创建进度对话框
         JDialog progressDialog = new JDialog(this, "执行进度", true);
         progressDialog.setLayout(new BorderLayout());
-        
+
         JProgressBar progressBar = new JProgressBar(0, 100);
         progressBar.setStringPainted(true);
         progressBar.setString("准备执行...");
-        
+
         JLabel statusLabel = new JLabel("正在解析SQL文件...");
         statusLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
+
         JButton stopButton = new JButton("停止");
         AtomicBoolean stopped = new AtomicBoolean(false);
         stopButton.addActionListener(e -> stopped.set(true));
-        
+
         JPanel buttonPanel = new JPanel();
         buttonPanel.add(stopButton);
-        
+
         progressDialog.add(statusLabel, BorderLayout.NORTH);
         progressDialog.add(progressBar, BorderLayout.CENTER);
         progressDialog.add(buttonPanel, BorderLayout.SOUTH);
         progressDialog.setSize(400, 150);
         progressDialog.setLocationRelativeTo(this);
-        
+
         // 使用SwingWorker在后台执行SQL
         SwingWorker<Void, Object[]> worker = new SwingWorker<Void, Object[]>() {
             @Override
@@ -3940,13 +3934,13 @@ public class MainFrame extends JFrame {
                     // 读取SQL文件并解析成独立的SQL语句
                     File file = new File(filePath);
                     String content = new String(java.nio.file.Files.readAllBytes(file.toPath()));
-                    
+
                     // 简单分割SQL语句（以分号结尾）
                     List<String> sqlStatements = new ArrayList<>();
                     StringBuilder currentStatement = new StringBuilder();
                     boolean inString = false;
                     boolean escaped = false;
-                    
+
                     for (char c : content.toCharArray()) {
                         // 这里增加判断，如果读取行以-- 开头，那么这行就是注释，直接忽略，从下一行开始重新读取
                         if (c == '\n' && currentStatement.toString().trim().startsWith("--")) {
@@ -3955,13 +3949,13 @@ public class MainFrame extends JFrame {
                         }
 
                         currentStatement.append(c);
-                        
+
                         if (c == '\'' && !escaped) {
                             inString = !inString;
                         }
-                        
+
                         escaped = c == '\\' && !escaped;
-                        
+
                         if (c == ';' && !inString) {
                             String sql = currentStatement.toString().trim();
                             if (!sql.isEmpty() && !sql.startsWith("--")) {
@@ -3970,26 +3964,26 @@ public class MainFrame extends JFrame {
                             currentStatement = new StringBuilder();
                         }
                     }
-                    
+
                     // 如果最后一个语句没有分号
                     String finalSql = currentStatement.toString().trim();
                     if (!finalSql.isEmpty() && !finalSql.startsWith("--")) {
                         sqlStatements.add(finalSql);
                     }
-                    
+
                     // 过滤注释和空语句
                     sqlStatements = sqlStatements.stream()
                             .map(String::trim)
                             .filter(sql -> !sql.isEmpty() && !sql.startsWith("--"))
                             .collect(java.util.stream.Collectors.toList());
-                    
+
                     int totalStatements = sqlStatements.size();
                     publish(new Object[]{"共找到 " + totalStatements + " 条SQL语句", 0});
-                    
+
                     // 分类SQL语句为DDL(CREATE TABLE)和DML(INSERT等其他语句)
                     List<String> createTableStatements = new ArrayList<>();
                     List<String> otherStatements = new ArrayList<>();
-                    
+
                     // 将SQL语句分为CREATE TABLE和其他语句
                     for (String sql : sqlStatements) {
                         // 判断是否是CREATE TABLE语句
@@ -3999,33 +3993,33 @@ public class MainFrame extends JFrame {
                             otherStatements.add(sql);
                         }
                     }
-                    
+
                     publish(new Object[]{"正在执行表结构创建语句...", 0});
-                    
+
                     // 创建线程池执行SQL语句
                     ExecutorService executor = Executors.newFixedThreadPool(threads);
-                    
+
                     // 批量执行
                     AtomicInteger completedCount = new AtomicInteger(0);
                     AtomicInteger errorCount = new AtomicInteger(0);
                     List<Future<?>> futures = new ArrayList<>();
-                    
+
                     // 1. 首先执行所有CREATE TABLE语句 - 这些语句顺序执行，不并行
                     for (String sql : createTableStatements) {
                         if (stopped.get()) {
                             break;
                         }
-                        
+
                         try {
                             // 执行建表语句
                             Map<String, Object> result = DatabaseService.executeUpdate(config, sql);
                             boolean success = (boolean) result.get("success");
-                            
+
                             if (success) {
                                 int completed = completedCount.incrementAndGet();
                                 int progress = (completed * 100) / totalStatements;
-                                publish(new Object[]{"已执行表结构语句: " + completed + "/" + createTableStatements.size() + 
-                                      ", 错误: " + errorCount.get(), progress});
+                                publish(new Object[]{"已执行表结构语句: " + completed + "/" + createTableStatements.size() +
+                                        ", 错误: " + errorCount.get(), progress});
                             } else {
                                 errorCount.incrementAndGet();
                                 String errorMessage = (String) result.get("message");
@@ -4036,38 +4030,38 @@ public class MainFrame extends JFrame {
                             publish(new Object[]{"表结构语句错误: " + e.getMessage(), -1});
                         }
                     }
-                    
+
                     // 2. 然后执行所有其他语句(如INSERT语句) - 可以并行执行
                     if (!stopped.get()) {
                         publish(new Object[]{"正在执行数据插入语句...", completedCount.get() * 100 / totalStatements});
-                        
+
                         // 将SQL语句分组为批次
                         List<List<String>> batches = new ArrayList<>();
                         for (int i = 0; i < otherStatements.size(); i += batchSize) {
                             batches.add(otherStatements.subList(i, Math.min(i + batchSize, otherStatements.size())));
                         }
-                        
+
                         for (List<String> batch : batches) {
                             if (stopped.get()) {
                                 break;
                             }
-                            
+
                             Future<?> future = executor.submit(() -> {
                                 for (String sql : batch) {
                                     if (stopped.get()) {
                                         break;
                                     }
-                                    
+
                                     try {
                                         // 执行非查询语句
                                         Map<String, Object> result = DatabaseService.executeUpdate(config, sql);
                                         boolean success = (boolean) result.get("success");
-                                        
+
                                         if (success) {
                                             int completed = completedCount.incrementAndGet();
                                             int progress = (completed * 100) / totalStatements;
-                                            publish(new Object[]{"已执行: " + completed + "/" + totalStatements + 
-                                                  ", 错误: " + errorCount.get(), progress});
+                                            publish(new Object[]{"已执行: " + completed + "/" + totalStatements +
+                                                    ", 错误: " + errorCount.get(), progress});
                                         } else {
                                             errorCount.incrementAndGet();
                                             String errorMessage = (String) result.get("message");
@@ -4081,7 +4075,7 @@ public class MainFrame extends JFrame {
                             });
                             futures.add(future);
                         }
-                        
+
                         // 等待所有任务完成
                         for (Future<?> future : futures) {
                             if (!stopped.get()) {
@@ -4089,37 +4083,37 @@ public class MainFrame extends JFrame {
                             }
                         }
                     }
-                    
+
                     executor.shutdown();
-                    
+
                     // 如果未被停止，则设置为100%完成
                     if (!stopped.get()) {
-                        publish(new Object[]{"执行完成, 总共: " + totalStatements + ", 成功: " + 
+                        publish(new Object[]{"执行完成, 总共: " + totalStatements + ", 成功: " +
                                 (totalStatements - errorCount.get()) + ", 错误: " + errorCount.get(), 100});
                     } else {
                         publish(new Object[]{"执行已停止", -1});
                     }
-                    
+
                 } catch (Exception e) {
                     e.printStackTrace();
                     publish(new Object[]{"执行失败: " + e.getMessage(), -1});
                 }
                 return null;
             }
-            
+
             @Override
             protected void process(List<Object[]> chunks) {
                 Object[] latestUpdate = chunks.get(chunks.size() - 1);
                 String status = (String) latestUpdate[0];
                 int progress = (int) latestUpdate[1];
-                
+
                 statusLabel.setText(status);
                 if (progress >= 0) {
                     progressBar.setValue(progress);
                     progressBar.setString(progress + "%");
                 }
             }
-            
+
             @Override
             protected void done() {
                 stopButton.setText("关闭");
@@ -4127,8 +4121,88 @@ public class MainFrame extends JFrame {
                 stopButton.addActionListener(e -> progressDialog.dispose());
             }
         };
-        
+
         worker.execute();
         progressDialog.setVisible(true);
     }
-}
+
+
+    */
+/**
+     * 创建数据编辑控制面板
+     *//*
+
+    private JPanel createDataEditPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
+        panel.setBackground(new Color(60, 63, 65));
+
+        JCheckBox editableCheckBox = new JCheckBox("启用编辑");
+        editableCheckBox.setForeground(new Color(187, 187, 187));
+        editableCheckBox.setBackground(new Color(60, 63, 65));
+
+        addRowButton = new JButton("添加行");
+        addRowButton.setBackground(new Color(60, 63, 65));
+        addRowButton.setForeground(new Color(187, 187, 187));
+        addRowButton.setEnabled(false);
+
+        deleteRowButton = new JButton("删除行");
+        deleteRowButton.setBackground(new Color(60, 63, 65));
+        deleteRowButton.setForeground(new Color(187, 187, 187));
+        deleteRowButton.setEnabled(false);
+
+        submitChangesButton = new JButton("提交更改");
+        submitChangesButton.setBackground(new Color(60, 63, 65));
+        submitChangesButton.setForeground(new Color(187, 187, 187));
+        submitChangesButton.setEnabled(false);
+
+        // 添加监听器
+        editableCheckBox.addActionListener(e -> {
+            isDataEditable = editableCheckBox.isSelected();
+            resultTableModel.setEditable(isDataEditable);
+            addRowButton.setEnabled(isDataEditable);
+            deleteRowButton.setEnabled(isDataEditable);
+            submitChangesButton.setEnabled(isDataEditable);
+
+            if (isDataEditable && currentTableName != null) {
+                // 获取表的主键信息，用于编辑时生成更新语句
+                fetchTablePrimaryKeys(currentTableName);
+            }
+        });
+
+        addRowButton.addActionListener(e -> {
+            // 添加新行
+            resultTableModel.addRow();
+
+            // 记录修改
+            int rowCount = resultTableModel.getRowCount();
+            if (rowCount > 0) {
+                modifiedRows.add(Integer.valueOf(rowCount - 1));
+            }
+        });
+
+        deleteRowButton.addActionListener(e -> {
+            int selectedRow = resultTable.getSelectedRow();
+            if (selectedRow != -1) {
+                // 记录要删除的行
+                modifiedRows.add(Integer.valueOf(selectedRow));
+
+                // 标记为删除
+                resultTableModel.markRowAsDeleted(selectedRow);
+            }
+        });
+
+        submitChangesButton.addActionListener(e -> {
+            // 保存修改
+            saveTableChanges();
+        });
+
+        panel.add(editableCheckBox);
+        panel.add(addRowButton);
+        panel.add(deleteRowButton);
+        panel.add(submitChangesButton);
+
+        return panel;
+    }
+
+}*/

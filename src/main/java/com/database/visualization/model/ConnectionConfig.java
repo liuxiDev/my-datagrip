@@ -1,9 +1,10 @@
 package com.database.visualization.model;
 
-import java.io.Serializable;
-import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.io.Serializable;
+import java.util.UUID;
 
 /**
  * 数据库连接配置

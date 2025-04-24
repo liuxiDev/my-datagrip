@@ -4,12 +4,12 @@ import com.database.visualization.controller.DatabaseService;
 import com.database.visualization.model.ConnectionConfig;
 
 import javax.swing.*;
+import javax.swing.event.CaretListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import javax.swing.event.CaretListener;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;

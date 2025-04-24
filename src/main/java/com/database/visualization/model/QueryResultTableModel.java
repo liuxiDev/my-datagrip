@@ -4,7 +4,6 @@ import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.HashSet;
 
 /**
  * 查询结果表格模型
@@ -47,20 +46,58 @@ public class QueryResultTableModel extends AbstractTableModel {
      * @param dataList 数据列表
      * @param columnList 列名列表
      */
-    public void setDataFromMap(List<Map<String, Object>> dataList, List<String> columnList) {
+    public void setDataFromMap(List<?> dataList, List<String> columnList) {
         this.columnNames = columnList;
         this.data = new ArrayList<>();
         
-        // 转换Map数据为列表数据
-        for (Map<String, Object> row : dataList) {
-            List<Object> rowData = new ArrayList<>();
-            for (String column : columnList) {
-                rowData.add(row.get(column));
+        // 检查数据类型并做相应处理
+        if (!dataList.isEmpty()) {
+            if (dataList.get(0) instanceof Map) {
+                // 处理Map类型数据
+                for (Object rowObj : dataList) {
+                    Map<String, Object> row = (Map<String, Object>) rowObj;
+                    List<Object> rowData = new ArrayList<>();
+                    for (String column : columnList) {
+                        rowData.add(row.get(column));
+                    }
+                    this.data.add(rowData);
+                }
+            } else if (dataList.get(0) instanceof List) {
+                // 处理List类型数据
+                for (Object rowObj : dataList) {
+                    List<Object> row = (List<Object>) rowObj;
+                    this.data.add(new ArrayList<>(row));
+                }
             }
-            this.data.add(rowData);
         }
         
-        this.originalData = new ArrayList<>(this.data);
+        this.originalData = new ArrayList<>();
+        for (List<Object> row : this.data) {
+            this.originalData.add(new ArrayList<>(row));
+        }
+        this.modifiedRows = new ArrayList<>();
+        
+        fireTableStructureChanged();
+    }
+    
+    /**
+     * 直接设置列表数据
+     * @param dataList 数据列表 (List<List<Object>>)
+     * @param columnList 列名列表
+     */
+    public void setDataDirectly(List<List<Object>> dataList, List<String> columnList) {
+        this.columnNames = columnList;
+        this.data = new ArrayList<>();
+        
+        // 直接复制列表数据
+        for (List<Object> row : dataList) {
+            this.data.add(new ArrayList<>(row));
+        }
+        
+        this.originalData = new ArrayList<>();
+        for (List<Object> row : this.data) {
+            this.originalData.add(new ArrayList<>(row));
+        }
         this.modifiedRows = new ArrayList<>();
         
         fireTableStructureChanged();

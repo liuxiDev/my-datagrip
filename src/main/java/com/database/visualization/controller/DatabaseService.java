@@ -4,9 +4,9 @@ import com.database.visualization.model.ConnectionConfig;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
+import java.lang.reflect.Method;
 import java.sql.*;
 import java.util.*;
-import java.lang.reflect.Method;
 
 /**
  * 数据库服务，用于管理连接和执行查询
@@ -1065,8 +1065,10 @@ public class DatabaseService {
             stats.put("数据库名", config.getDatabase());
             stats.put("状态", "已连接");
             
+            String dbType = config.getDatabaseType().toLowerCase();
+            
             // 获取表数量
-            if ("mysql".equalsIgnoreCase(config.getDatabaseType())) {
+            if ("mysql".equalsIgnoreCase(dbType)) {
                 Map<String, Object> result = executeQuery(config, 
                         "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '" + config.getDatabase() + "'");
                 if ((boolean) result.get("success")) {
@@ -1084,7 +1086,52 @@ public class DatabaseService {
                         stats.put("服务器版本", data.get(0).get(0).toString());
                     }
                 }
-            } else if ("postgresql".equalsIgnoreCase(config.getDatabaseType())) {
+                
+                // 获取服务器运行时间
+                result = executeQuery(config, "SHOW GLOBAL STATUS WHERE Variable_name = 'Uptime'");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && data.get(0).size() > 1) {
+                        long uptime = Long.parseLong(data.get(0).get(1).toString());
+                        long days = uptime / (24 * 3600);
+                        long hours = (uptime % (24 * 3600)) / 3600;
+                        long minutes = (uptime % 3600) / 60;
+                        stats.put("运行时间", String.format("%d天 %d小时 %d分钟", days, hours, minutes));
+                    }
+                }
+                
+                // 获取数据库大小
+                result = executeQuery(config, 
+                    "SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb " +
+                    "FROM information_schema.tables " +
+                    "WHERE table_schema = '" + config.getDatabase() + "'");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty() && data.get(0).get(0) != null) {
+                        stats.put("数据库大小", data.get(0).get(0) + " MB");
+                    }
+                }
+                
+                // 获取连接信息
+                result = executeQuery(config, "SHOW GLOBAL STATUS WHERE Variable_name IN ('Threads_connected', 'Threads_running', 'Max_used_connections')");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    for (List<Object> row : data) {
+                        if (row.size() > 1) {
+                            String name = row.get(0).toString();
+                            String value = row.get(1).toString();
+                            
+                            if ("Threads_connected".equals(name)) {
+                                stats.put("当前连接数", value);
+                            } else if ("Threads_running".equals(name)) {
+                                stats.put("活动连接数", value);
+                            } else if ("Max_used_connections".equals(name)) {
+                                stats.put("历史最大连接数", value);
+                            }
+                        }
+                    }
+                }
+            } else if ("postgresql".equalsIgnoreCase(dbType)) {
                 Map<String, Object> result = executeQuery(config, 
                         "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog', 'information_schema')");
                 if ((boolean) result.get("success")) {
@@ -1100,6 +1147,158 @@ public class DatabaseService {
                     List<List<Object>> data = (List<List<Object>>) result.get("data");
                     if (!data.isEmpty() && !data.get(0).isEmpty()) {
                         stats.put("服务器版本", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取数据库大小
+                result = executeQuery(config, "SELECT pg_size_pretty(pg_database_size(current_database()))");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("数据库大小", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取连接信息
+                result = executeQuery(config, "SELECT count(*) FROM pg_stat_activity");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("当前连接数", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取活动连接
+                result = executeQuery(config, "SELECT count(*) FROM pg_stat_activity WHERE state = 'active'");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("活动连接数", data.get(0).get(0).toString());
+                    }
+                }
+            } else if ("sqlserver".equalsIgnoreCase(dbType)) {
+                // SQL Server统计信息
+                Map<String, Object> result = executeQuery(config, "SELECT COUNT(*) FROM sys.tables");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("表数量", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取版本信息
+                result = executeQuery(config, "SELECT @@VERSION");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("服务器版本", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取数据库大小
+                result = executeQuery(config, 
+                    "SELECT CONVERT(VARCHAR, SUM(size) * 8 / 1024) + ' MB' FROM sys.database_files " +
+                    "WHERE type_desc = 'ROWS'");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("数据库大小", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取连接信息
+                result = executeQuery(config, "SELECT COUNT(*) FROM sys.dm_exec_connections");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("当前连接数", data.get(0).get(0).toString());
+                    }
+                }
+            } else if ("oracle".equalsIgnoreCase(dbType)) {
+                // Oracle统计信息
+                Map<String, Object> result = executeQuery(config, "SELECT COUNT(*) FROM user_tables");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("表数量", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取版本信息
+                result = executeQuery(config, "SELECT BANNER FROM v$version WHERE ROWNUM = 1");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("服务器版本", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取连接信息
+                result = executeQuery(config, "SELECT COUNT(*) FROM v$session");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("当前连接数", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取活动连接
+                result = executeQuery(config, "SELECT COUNT(*) FROM v$session WHERE status = 'ACTIVE'");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("活动连接数", data.get(0).get(0).toString());
+                    }
+                }
+            } else if ("sqlite".equalsIgnoreCase(dbType)) {
+                // SQLite统计信息
+                Map<String, Object> result = executeQuery(config, "SELECT COUNT(*) FROM sqlite_master WHERE type='table'");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("表数量", data.get(0).get(0).toString());
+                    }
+                }
+                
+                // 获取版本信息
+                result = executeQuery(config, "SELECT sqlite_version()");
+                if ((boolean) result.get("success")) {
+                    List<List<Object>> data = (List<List<Object>>) result.get("data");
+                    if (!data.isEmpty() && !data.get(0).isEmpty()) {
+                        stats.put("服务器版本", data.get(0).get(0).toString());
+                    }
+                }
+            } else if ("redis".equalsIgnoreCase(dbType)) {
+                // Redis统计信息
+                Map<String, Object> result = executeRedisCommand(config, "INFO");
+                if ((boolean) result.get("success")) {
+                    String info = result.get("data").toString();
+                    String[] lines = info.split("\r?\n");
+                    
+                    for (String line : lines) {
+                        if (line.startsWith("redis_version:")) {
+                            stats.put("服务器版本", line.substring("redis_version:".length()).trim());
+                        } else if (line.startsWith("connected_clients:")) {
+                            stats.put("当前连接数", line.substring("connected_clients:".length()).trim());
+                        } else if (line.startsWith("used_memory_human:")) {
+                            stats.put("内存使用", line.substring("used_memory_human:".length()).trim());
+                        } else if (line.startsWith("uptime_in_seconds:")) {
+                            long uptime = Long.parseLong(line.substring("uptime_in_seconds:".length()).trim());
+                            long days = uptime / (24 * 3600);
+                            long hours = (uptime % (24 * 3600)) / 3600;
+                            long minutes = (uptime % 3600) / 60;
+                            stats.put("运行时间", String.format("%d天 %d小时 %d分钟", days, hours, minutes));
+                        } else if (line.startsWith("total_connections_received:")) {
+                            stats.put("总连接数", line.substring("total_connections_received:".length()).trim());
+                        } else if (line.startsWith("total_commands_processed:")) {
+                            stats.put("总命令数", line.substring("total_commands_processed:".length()).trim());
+                        }
+                    }
+                    
+                    // 获取键数量
+                    Map<String, Object> dbSizeResult = executeRedisCommand(config, "DBSIZE");
+                    if ((boolean) dbSizeResult.get("success")) {
+                        stats.put("键数量", dbSizeResult.get("data").toString());
                     }
                 }
             }
