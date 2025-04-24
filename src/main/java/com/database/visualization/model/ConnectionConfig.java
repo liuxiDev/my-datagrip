@@ -57,7 +57,7 @@ public class ConnectionConfig implements Serializable {
                 break;
             case "redis":
                 // Redis不使用JDBC URL，但为显示和一致性创建一个类似的格式
-                url = String.format("redis://%s:%d/%s", host, port, database.isEmpty() ? "0" : database);
+                url = String.format("redis://%s:%d/%s", host, port,(database==null|| database.isEmpty()) ? "0" : database);
                 break;
             default:
                 url = "";

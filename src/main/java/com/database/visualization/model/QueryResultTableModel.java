@@ -244,11 +244,15 @@ public class QueryResultTableModel extends AbstractTableModel {
      * 清除所有修改标记
      */
     public void clearModifications() {
+        // 清除修改记录
+        modifiedRows.clear();
+        
         // 重置数据为原始数据
         data.clear();
         for (List<Object> row : originalData) {
             data.add(new ArrayList<>(row));
         }
+        
         fireTableDataChanged();
     }
     
@@ -300,6 +304,16 @@ public class QueryResultTableModel extends AbstractTableModel {
     @Override
     public void setValueAt(Object value, int row, int col) {
         if (editable && row < data.size() && col < columnNames.size()) {
+            // 获取当前值进行比较
+            Object currentValue = data.get(row).get(col);
+            
+            // 值相同则不需要标记修改
+            if ((currentValue == null && value == null) || 
+                (currentValue != null && currentValue.equals(value))) {
+                return;
+            }
+            
+            // 设置新值
             data.get(row).set(col, value);
             fireTableCellUpdated(row, col);
             

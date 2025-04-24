@@ -83,9 +83,51 @@ public class DatabaseService {
         }
         
         String id = config.getId();
-        if (!dataSources.containsKey(id)) {
+        String dbKey = id + ":" + config.getDatabase(); // 使用ID和数据库名称组合作为key
+        
+        // 如果该数据库的连接池不存在，创建新的连接池
+        if (!dataSources.containsKey(dbKey)) {
+            // 如果存在旧的连接池（不同数据库），先关闭它
+            if (dataSources.containsKey(id)) {
+                HikariDataSource oldDataSource = dataSources.get(id);
+                dataSources.remove(id);
+                try {
+                    oldDataSource.close();
+                } catch (Exception e) {
+                    // 忽略关闭错误
+                }
+            }
+            
             HikariConfig hikariConfig = new HikariConfig();
-            hikariConfig.setJdbcUrl(config.getUrl());
+            
+            // 根据当前数据库名称动态构建 JDBC URL
+            String originalUrl = config.getUrl();
+            String databaseName = config.getDatabase();
+            
+            // 根据数据库类型构建正确的 URL
+            if ("mysql".equalsIgnoreCase(config.getDatabaseType())) {
+                // 处理MySQL URL: jdbc:mysql://host:port/database?params
+                int dbStart = originalUrl.indexOf("/", 13); // 跳过jdbc:mysql://
+                if (dbStart > 0) {
+                    int paramStart = originalUrl.indexOf("?", dbStart);
+                    if (paramStart > 0) {
+                        // URL 带参数: jdbc:mysql://host:port/olddb?params
+                        String baseUrl = originalUrl.substring(0, dbStart + 1) + databaseName + originalUrl.substring(paramStart);
+                        hikariConfig.setJdbcUrl(baseUrl);
+                    } else {
+                        // URL 不带参数: jdbc:mysql://host:port/olddb
+                        String baseUrl = originalUrl.substring(0, dbStart + 1) + databaseName;
+                        hikariConfig.setJdbcUrl(baseUrl);
+                    }
+                } else {
+                    // 如果URL格式不标准，使用原始URL
+                    hikariConfig.setJdbcUrl(originalUrl);
+                }
+            } else {
+                // 其他数据库类型使用原始URL
+                hikariConfig.setJdbcUrl(originalUrl);
+            }
+            
             hikariConfig.setUsername(config.getUsername());
             hikariConfig.setPassword(config.getPassword());
             hikariConfig.setMaximumPoolSize(10);
@@ -95,10 +137,10 @@ public class DatabaseService {
             hikariConfig.setMaxLifetime(1800000);
             
             HikariDataSource dataSource = new HikariDataSource(hikariConfig);
-            dataSources.put(id, dataSource);
+            dataSources.put(dbKey, dataSource); // 使用新的组合key存储
         }
         
-        return dataSources.get(id).getConnection();
+        return dataSources.get(dbKey).getConnection();
     }
     
     /**
@@ -139,10 +181,24 @@ public class DatabaseService {
      * 关闭数据库连接
      */
     public static void closeConnection(String connectionId) {
-        if (dataSources.containsKey(connectionId)) {
-            HikariDataSource dataSource = dataSources.get(connectionId);
-            dataSource.close();
-            dataSources.remove(connectionId);
+        // 关闭所有与该连接ID相关的连接池
+        List<String> keysToRemove = new ArrayList<>();
+        
+        for (String key : dataSources.keySet()) {
+            if (key.startsWith(connectionId + ":") || key.equals(connectionId)) {
+                HikariDataSource dataSource = dataSources.get(key);
+                try {
+                    dataSource.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                keysToRemove.add(key);
+            }
+        }
+        
+        // 移除已关闭的连接池
+        for (String key : keysToRemove) {
+            dataSources.remove(key);
         }
         
         if (redisConnections.containsKey(connectionId)) {
@@ -160,11 +216,17 @@ public class DatabaseService {
      * 关闭所有连接
      */
     public static void closeAllConnections() {
+        // 关闭所有数据源连接池
         for (HikariDataSource dataSource : dataSources.values()) {
-            dataSource.close();
+            try {
+                dataSource.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         dataSources.clear();
         
+        // 关闭所有Redis连接
         for (Object jedis : redisConnections.values()) {
             try {
                 jedis.getClass().getMethod("close").invoke(jedis);

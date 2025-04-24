@@ -1,8 +1,7 @@
 package com.database.visualization.view;
 
 import javax.swing.*;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.TableModel;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -35,45 +34,30 @@ public class CreateTableDialog extends JDialog {
         columns.add(column);
         ((ColumnsTableModel)columnsTable.getModel()).fireTableDataChanged();
         
-        setSize(600, 400);
-        setLocationRelativeTo(owner);
+        setSize(800, 500);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        setModal(true);
     }
     
     private void initComponents() {
+        setTitle("创建表");
+        setSize(800, 500);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        setModal(true);
+
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
         // 表名面板
-        JPanel tableNamePanel = new JPanel(new BorderLayout());
+        JPanel tableNamePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         tableNamePanel.setBorder(BorderFactory.createTitledBorder("表信息"));
         
-        JPanel tableNameInnerPanel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(5, 5, 5, 5);
-        
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.weightx = 0.0;
-        tableNameInnerPanel.add(new JLabel("Schema:"), gbc);
-        
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.weightx = 1.0;
-        tableNameInnerPanel.add(new JLabel(schemaName), gbc);
-        
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.weightx = 0.0;
-        tableNameInnerPanel.add(new JLabel("表名:"), gbc);
-        
-        gbc.gridx = 1;
-        gbc.gridy = 1;
-        gbc.weightx = 1.0;
+        JLabel tableNameLabel = new JLabel("表名:");
         tableNameField = new JTextField(20);
-        tableNameInnerPanel.add(tableNameField, gbc);
-        
-        tableNamePanel.add(tableNameInnerPanel, BorderLayout.CENTER);
+        tableNamePanel.add(tableNameLabel);
+        tableNamePanel.add(tableNameField);
         
         // 列定义面板
         JPanel columnsPanel = new JPanel(new BorderLayout());
@@ -83,11 +67,41 @@ public class CreateTableDialog extends JDialog {
         columnsTable = new JTable(tableModel);
         columnsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         
-        // 设置列类型的下拉列表
-        JComboBox<String> typeComboBox = new JComboBox<>(new String[] {
-                "INT", "BIGINT", "TINYINT", "VARCHAR", "CHAR", "TEXT", "DATE", "DATETIME", "TIMESTAMP", "DECIMAL", "FLOAT", "DOUBLE", "BOOLEAN"
+        // 设置表格列宽
+        TableColumnModel columnModel = columnsTable.getColumnModel();
+        columnModel.getColumn(0).setPreferredWidth(100); // 名称
+        columnModel.getColumn(1).setPreferredWidth(100); // 类型
+        columnModel.getColumn(2).setPreferredWidth(50); // 长度
+        columnModel.getColumn(3).setPreferredWidth(60); // Not Null
+        columnModel.getColumn(4).setPreferredWidth(60); // 主键
+        columnModel.getColumn(5).setPreferredWidth(80); // 自增
+        columnModel.getColumn(6).setPreferredWidth(80); // 唯一
+        columnModel.getColumn(7).setPreferredWidth(100); // 默认值
+        columnModel.getColumn(8).setPreferredWidth(150); // 注释
+        
+        // 设置表格编辑器
+        JComboBox<String> typeComboBox = new JComboBox<>(new String[]{
+            "INT", "BIGINT", "SMALLINT", "TINYINT", "VARCHAR", "CHAR", "TEXT", "DATETIME", 
+            "DATE", "TIME", "TIMESTAMP", "DECIMAL", "FLOAT", "DOUBLE", "BOOLEAN", "ENUM", "JSON"
         });
-        columnsTable.getColumnModel().getColumn(1).setCellEditor(new DefaultCellEditor(typeComboBox));
+        columnModel.getColumn(1).setCellEditor(new DefaultCellEditor(typeComboBox));
+        
+        // 设置复选框列的单元格渲染器和编辑器
+        TableColumn notNullColumn = columnModel.getColumn(3);
+        notNullColumn.setCellRenderer(new CheckBoxRenderer());
+        notNullColumn.setCellEditor(new DefaultCellEditor(new JCheckBox()));
+        
+        TableColumn primaryKeyColumn = columnModel.getColumn(4);
+        primaryKeyColumn.setCellRenderer(new CheckBoxRenderer());
+        primaryKeyColumn.setCellEditor(new DefaultCellEditor(new JCheckBox()));
+        
+        TableColumn autoIncrementColumn = columnModel.getColumn(5);
+        autoIncrementColumn.setCellRenderer(new CheckBoxRenderer());
+        autoIncrementColumn.setCellEditor(new DefaultCellEditor(new JCheckBox()));
+        
+        TableColumn uniqueKeyColumn = columnModel.getColumn(6);
+        uniqueKeyColumn.setCellRenderer(new CheckBoxRenderer());
+        uniqueKeyColumn.setCellEditor(new DefaultCellEditor(new JCheckBox()));
         
         JScrollPane scrollPane = new JScrollPane(columnsTable);
         columnsPanel.add(scrollPane, BorderLayout.CENTER);
@@ -102,7 +116,7 @@ public class CreateTableDialog extends JDialog {
         columnsPanel.add(columnButtonsPanel, BorderLayout.SOUTH);
         
         // 对话框按钮面板
-        JPanel buttonPanel = new JPanel();
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         okButton = new JButton("创建");
         cancelButton = new JButton("取消");
         
@@ -201,18 +215,62 @@ public class CreateTableDialog extends JDialog {
 
         StringBuilder sql = new StringBuilder("CREATE TABLE " + schemaName + "." + tableNameField.getText() + " (\n");
         
+        // 收集唯一约束列
+        List<String> uniqueColumns = new ArrayList<>();
+        
         for (ColumnDefinition column : columns) {
             sql.append("    ").append(column.getName()).append(" ").append(column.getType());
             
-            if (column.getType().equals("VARCHAR") && !column.getLength().isEmpty()) {
-                sql.append("(").append(column.getLength()).append(")");
+            // 处理有长度的类型
+            if (column.getType().equalsIgnoreCase("VARCHAR") || 
+                column.getType().equalsIgnoreCase("CHAR") ||
+                column.getType().equalsIgnoreCase("DECIMAL")) {
+                if (!column.getLength().isEmpty()) {
+                    sql.append("(").append(column.getLength()).append(")");
+                } else if (column.getType().equalsIgnoreCase("VARCHAR") || column.getType().equalsIgnoreCase("CHAR")) {
+                    sql.append("(255)"); // 默认长度
+                }
             }
             
+            // NOT NULL约束
             if (column.isNotNull()) {
                 sql.append(" NOT NULL");
             }
             
+            // 自动增长
+            if (column.isAutoIncrement()) {
+                sql.append(" AUTO_INCREMENT");
+            }
+            
+            // 默认值
+            if (!column.getDefaultValue().isEmpty()) {
+                if (column.getDefaultValue().equalsIgnoreCase("NULL")) {
+                    sql.append(" DEFAULT NULL");
+                } else if (column.getType().equalsIgnoreCase("INT") || 
+                          column.getType().equalsIgnoreCase("BIGINT") ||
+                          column.getType().equalsIgnoreCase("TINYINT") ||
+                          column.getType().equalsIgnoreCase("FLOAT") ||
+                          column.getType().equalsIgnoreCase("DOUBLE") ||
+                          column.getType().equalsIgnoreCase("DECIMAL")) {
+                    // 数字类型默认值无需引号
+                    sql.append(" DEFAULT ").append(column.getDefaultValue());
+                } else {
+                    // 其他类型默认值需要引号
+                    sql.append(" DEFAULT '").append(column.getDefaultValue().replace("'", "''")).append("'");
+                }
+            }
+            
+            // 注释
+            if (!column.getComment().isEmpty()) {
+                sql.append(" COMMENT '").append(column.getComment().replace("'", "''")).append("'");
+            }
+            
             sql.append(",\n");
+            
+            // 收集唯一约束列
+            if (column.isUniqueKey() && !column.isPrimaryKey()) {
+                uniqueColumns.add(column.getName());
+            }
         }
         
         // 添加主键约束
@@ -225,14 +283,38 @@ public class CreateTableDialog extends JDialog {
                     sql.append(", ");
                 }
             }
-            sql.append(")\n");
+            sql.append(")");
+            if (uniqueColumns.isEmpty()) {
+                sql.append("\n");
+            } else {
+                sql.append(",\n");
+            }
         } else {
-            // 如果没有主键，移除最后一个逗号和换行符
-            sql.setLength(sql.length() - 2);
-            sql.append("\n");
+            // 如果没有主键且没有唯一约束，移除最后一个逗号和换行符
+            if (uniqueColumns.isEmpty()) {
+                sql.setLength(sql.length() - 2);
+                sql.append("\n");
+            }
         }
         
-        sql.append(");");
+        // 添加唯一约束
+        if (!uniqueColumns.isEmpty()) {
+            for (int i = 0; i < uniqueColumns.size(); i++) {
+                sql.append("    UNIQUE KEY `uk_").append(uniqueColumns.get(i)).append("` (").append(uniqueColumns.get(i)).append(")");
+                if (i < uniqueColumns.size() - 1) {
+                    sql.append(",\n");
+                } else {
+                    sql.append("\n");
+                }
+            }
+        }
+        
+        sql.append(")");
+        
+        // 添加表引擎和字符集
+        sql.append(" ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+        
+        sql.append(";");
         
         return sql.toString();
     }
@@ -256,6 +338,10 @@ public class CreateTableDialog extends JDialog {
         private String length;
         private boolean nullable;
         private boolean primaryKey;
+        private boolean autoIncrement;
+        private boolean uniqueKey;
+        private String defaultValue;
+        private String comment;
         
         public ColumnDefinition(String name, String type, String length, boolean nullable, boolean primaryKey) {
             this.name = name;
@@ -263,6 +349,10 @@ public class CreateTableDialog extends JDialog {
             this.length = length;
             this.nullable = nullable;
             this.primaryKey = primaryKey;
+            this.autoIncrement = false;
+            this.uniqueKey = false;
+            this.defaultValue = "";
+            this.comment = "";
         }
         
         public String getName() {
@@ -312,6 +402,38 @@ public class CreateTableDialog extends JDialog {
         public void setNotNull(boolean notNull) {
             this.nullable = !notNull;
         }
+        
+        public boolean isAutoIncrement() {
+            return autoIncrement;
+        }
+        
+        public void setAutoIncrement(boolean autoIncrement) {
+            this.autoIncrement = autoIncrement;
+        }
+        
+        public boolean isUniqueKey() {
+            return uniqueKey;
+        }
+        
+        public void setUniqueKey(boolean uniqueKey) {
+            this.uniqueKey = uniqueKey;
+        }
+        
+        public String getDefaultValue() {
+            return defaultValue;
+        }
+        
+        public void setDefaultValue(String defaultValue) {
+            this.defaultValue = defaultValue;
+        }
+        
+        public String getComment() {
+            return comment;
+        }
+        
+        public void setComment(String comment) {
+            this.comment = comment;
+        }
     }
     
     /**
@@ -319,7 +441,7 @@ public class CreateTableDialog extends JDialog {
      */
     private static class ColumnsTableModel extends AbstractTableModel {
         private List<ColumnDefinition> columns;
-        private final String[] columnNames = {"列名", "类型", "长度", "允许NULL", "主键"};
+        private final String[] columnNames = {"名称", "类型", "长度", "非空", "主键", "自增", "唯一", "默认值", "注释"};
         
         public ColumnsTableModel(List<ColumnDefinition> columns) {
             this.columns = columns;
@@ -342,13 +464,10 @@ public class CreateTableDialog extends JDialog {
         
         @Override
         public Class<?> getColumnClass(int columnIndex) {
-            switch (columnIndex) {
-                case 3: // 允许NULL
-                case 4: // 主键
-                    return Boolean.class;
-                default:
-                    return String.class;
+            if (columnIndex == 3 || columnIndex == 4 || columnIndex == 5 || columnIndex == 6) {
+                return Boolean.class;
             }
+            return String.class;
         }
         
         @Override
@@ -359,46 +478,54 @@ public class CreateTableDialog extends JDialog {
         @Override
         public Object getValueAt(int rowIndex, int columnIndex) {
             ColumnDefinition column = columns.get(rowIndex);
-            
             switch (columnIndex) {
-                case 0:
-                    return column.getName();
-                case 1:
-                    return column.getType();
-                case 2:
-                    return column.getLength();
-                case 3:
-                    return column.isNullable();
-                case 4:
-                    return column.isPrimaryKey();
-                default:
-                    return null;
+                case 0: return column.getName();
+                case 1: return column.getType();
+                case 2: return column.getLength();
+                case 3: return column.isNotNull();
+                case 4: return column.isPrimaryKey();
+                case 5: return column.isAutoIncrement();
+                case 6: return column.isUniqueKey();
+                case 7: return column.getDefaultValue();
+                case 8: return column.getComment();
+                default: return null;
             }
         }
         
         @Override
-        public void setValueAt(Object value, int rowIndex, int columnIndex) {
+        public void setValueAt(Object aValue, int rowIndex, int columnIndex) {
             ColumnDefinition column = columns.get(rowIndex);
-            
             switch (columnIndex) {
-                case 0:
-                    column.setName((String)value);
-                    break;
-                case 1:
-                    column.setType((String)value);
-                    break;
-                case 2:
-                    column.setLength((String)value);
-                    break;
-                case 3:
-                    column.setNullable((Boolean)value);
-                    break;
-                case 4:
-                    column.setPrimaryKey((Boolean)value);
-                    break;
+                case 0: column.setName((String) aValue); break;
+                case 1: column.setType((String) aValue); break;
+                case 2: column.setLength((String) aValue); break;
+                case 3: column.setNotNull((Boolean) aValue); break;
+                case 4: column.setPrimaryKey((Boolean) aValue); break;
+                case 5: column.setAutoIncrement((Boolean) aValue); break;
+                case 6: column.setUniqueKey((Boolean) aValue); break;
+                case 7: column.setDefaultValue((String) aValue); break;
+                case 8: column.setComment((String) aValue); break;
+            }
+            fireTableCellUpdated(rowIndex, columnIndex);
+        }
+    }
+
+    // 复选框单元格渲染器
+    private static class CheckBoxRenderer extends JCheckBox implements TableCellRenderer {
+        public CheckBoxRenderer() {
+            setHorizontalAlignment(JLabel.CENTER);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            if (value instanceof Boolean) {
+                setSelected((Boolean) value);
             }
             
-            fireTableCellUpdated(rowIndex, columnIndex);
+            setBackground(isSelected ? table.getSelectionBackground() : table.getBackground());
+            setForeground(isSelected ? table.getSelectionForeground() : table.getForeground());
+            
+            return this;
         }
     }
 } 
