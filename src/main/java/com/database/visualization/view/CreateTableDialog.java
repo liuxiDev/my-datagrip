@@ -23,14 +23,14 @@ public class CreateTableDialog extends JDialog {
     private List<ColumnDefinition> columns = new ArrayList<>();
     
     public CreateTableDialog(JFrame owner, String schemaName) {
-        super(owner, "创建新表", true);
+        super(owner, "创建表", true);
         this.schemaName = schemaName;
         
         initComponents();
         setupListeners();
         
         // 添加默认的第一列
-        ColumnDefinition column = new ColumnDefinition("id", "INT", "", false, true);
+        ColumnDefinition column = new ColumnDefinition("id", "INT", "", true, true);
         columns.add(column);
         ((ColumnsTableModel)columnsTable.getModel()).fireTableDataChanged();
         
@@ -41,12 +41,6 @@ public class CreateTableDialog extends JDialog {
     }
     
     private void initComponents() {
-        setTitle("创建表");
-        setSize(800, 500);
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setModal(true);
-
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
@@ -135,7 +129,7 @@ public class CreateTableDialog extends JDialog {
         addColumnButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                ColumnDefinition column = new ColumnDefinition("column" + (columns.size() + 1), "VARCHAR", "255", false, false);
+                ColumnDefinition column = new ColumnDefinition("column" + (columns.size() + 1), "VARCHAR", "255", true, false);
                 columns.add(column);
                 ((ColumnsTableModel)columnsTable.getModel()).fireTableDataChanged();
             }
@@ -343,11 +337,11 @@ public class CreateTableDialog extends JDialog {
         private String defaultValue;
         private String comment;
         
-        public ColumnDefinition(String name, String type, String length, boolean nullable, boolean primaryKey) {
+        public ColumnDefinition(String name, String type, String length, boolean notNull, boolean primaryKey) {
             this.name = name;
             this.type = type;
             this.length = length;
-            this.nullable = nullable;
+            this.nullable = !notNull;
             this.primaryKey = primaryKey;
             this.autoIncrement = false;
             this.uniqueKey = false;
