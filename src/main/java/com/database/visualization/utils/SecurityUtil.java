@@ -68,9 +68,26 @@ public class SecurityUtil {
         }
         
         try {
-            Base64.getDecoder().decode(str);
-            return true;
+            // 首先尝试Base64解码
+            byte[] decodedBytes = Base64.getDecoder().decode(str);
+            
+            // 如果能成功解码，尝试用我们的密钥解密
+            // 注意这里不要抛出异常，因为我们只是在判断，不是真的要解密
+            SecretKeySpec secretKey = new SecretKeySpec(KEY_BYTES, "AES");
+            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+            cipher.init(Cipher.DECRYPT_MODE, secretKey);
+            
+            try {
+                // 尝试解密，看是否能成功
+                cipher.doFinal(decodedBytes);
+                // 如果没有抛出异常，说明可能是由我们加密的
+                return true;
+            } catch (Exception e) {
+                // 解密失败，可能不是我们加密的
+                return false;
+            }
         } catch (Exception e) {
+            // 如果解码失败，说明不是Base64编码，肯定不是加密的
             return false;
         }
     }

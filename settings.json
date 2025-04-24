@@ -1,1 +1,11 @@
-{"isDarkTheme":false,"fontSizeFactor":1.4285715,"fontSizeValue":20}
+{
+  "isDarkTheme" : true,
+  "fontSizeFactor" : 1.0,
+  "fontSizeValue" : 14,
+  "security" : {
+    "encryptEnabled" : true,
+    "algorithm" : "AES",
+    "keyStrength" : "128位",
+    "secretKeyBytes" : "+iQYNsWu6Q+opohPe14Fyw=="
+  }
+}

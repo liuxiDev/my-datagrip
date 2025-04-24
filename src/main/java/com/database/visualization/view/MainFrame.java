@@ -27,8 +27,15 @@ import java.awt.event.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 主窗口
@@ -624,7 +631,7 @@ public class MainFrame extends JFrame {
                 DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
                 Object userObject = node.getUserObject();
 
-                // 处理右键点击
+                // 处理右键点击 - 显示上下文菜单
                 if (e.getButton() == MouseEvent.BUTTON3) {
                     showTreeNodeContextMenu(node, e.getX(), e.getY());
                     return;
@@ -674,6 +681,7 @@ public class MainFrame extends JFrame {
                                     // 重置到第一页
                                     currentPage = 1;
                                     pageField.setText("1");
+                                    
                                     // 设置SQL并执行查询
                                     String sql = String.format("SELECT * FROM %s.%s", dbName, tableName);
                                     sqlTextArea.setText(sql);
@@ -681,10 +689,6 @@ public class MainFrame extends JFrame {
                                 }
                             }
                         }
-                    }
-                    // 如果双击表节点
-                    else if (userObject instanceof String && node.isLeaf()) {
-                        // 这部分已在上面处理
                     }
                 }
             }
@@ -1883,11 +1887,16 @@ public class MainFrame extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(5, 5, 5, 5);
 
+        // 从SecurityManager获取当前设置
+        boolean currentEncryptEnabled = com.database.visualization.utils.SecurityManager.isEncryptEnabled();
+        String currentAlgorithm = com.database.visualization.utils.SecurityManager.getAlgorithm();
+        String currentKeyStrength = com.database.visualization.utils.SecurityManager.getKeyStrength();
+
         // 密码加密选项
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.gridwidth = 2;
-        JCheckBox encryptPasswordCheckbox = new JCheckBox("启用密码加密存储", true);
+        JCheckBox encryptPasswordCheckbox = new JCheckBox("启用密码加密存储", currentEncryptEnabled);
         panel.add(encryptPasswordCheckbox, gbc);
 
         // 加密算法
@@ -1900,6 +1909,7 @@ public class MainFrame extends JFrame {
         gbc.gridy = 1;
         String[] algorithms = {"AES", "DES", "RSA"};
         JComboBox<String> algorithmCombo = new JComboBox<>(algorithms);
+        algorithmCombo.setSelectedItem(currentAlgorithm);
         panel.add(algorithmCombo, gbc);
 
         // 密钥强度
@@ -1911,6 +1921,7 @@ public class MainFrame extends JFrame {
         gbc.gridy = 2;
         String[] strengths = {"128位", "192位", "256位"};
         JComboBox<String> strengthCombo = new JComboBox<>(strengths);
+        strengthCombo.setSelectedItem(currentKeyStrength);
         panel.add(strengthCombo, gbc);
 
         // 按钮
@@ -1921,6 +1932,14 @@ public class MainFrame extends JFrame {
         saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                // 保存设置到SecurityManager
+                boolean encryptEnabled = encryptPasswordCheckbox.isSelected();
+                String algorithm = (String) algorithmCombo.getSelectedItem();
+                String keyStrength = (String) strengthCombo.getSelectedItem();
+                
+                com.database.visualization.utils.SecurityManager.updateSecuritySettings(
+                    encryptEnabled, algorithm, keyStrength);
+                    
                 JOptionPane.showMessageDialog(dialog, "安全设置已保存");
                 dialog.dispose();
             }
@@ -2897,6 +2916,10 @@ public class MainFrame extends JFrame {
         JMenuItem dropDatabaseItem = new JMenuItem("删除数据库");
         JMenuItem newTableItem = new JMenuItem("新建表");
         JMenuItem queryItem = new JMenuItem("执行查询");
+        // 添加导出SQL选项
+        JMenuItem exportSqlItem = new JMenuItem("导出SQL");
+        // 添加批量执行SQL选项
+        JMenuItem batchExecuteSqlItem = new JMenuItem("批量执行SQL");
 
         refreshItem.addActionListener(e -> {
             currentConnection = config;
@@ -2929,6 +2952,14 @@ public class MainFrame extends JFrame {
             currentConnection = config;
             executeSQL();
         });
+        
+        exportSqlItem.addActionListener(e -> {
+            exportDatabaseSql(config, schemaName);
+        });
+        
+        batchExecuteSqlItem.addActionListener(e -> {
+            batchExecuteSql(config, schemaName);
+        });
 
         menu.add(refreshItem);
         menu.addSeparator();
@@ -2938,6 +2969,9 @@ public class MainFrame extends JFrame {
         menu.addSeparator();
         menu.add(newTableItem);
         menu.add(queryItem);
+        menu.addSeparator();
+        menu.add(exportSqlItem);
+        menu.add(batchExecuteSqlItem);
 
         menu.show(databaseTree, x, y);
     }
@@ -3516,5 +3550,585 @@ public class MainFrame extends JFrame {
         menu.add(queryItem);
 
         menu.show(databaseTree, x, y);
+    }
+
+    /**
+     * 导出数据库SQL，包括表结构和数据
+     * @param config 数据库连接配置
+     * @param schemaName 模式名称
+     */
+    private void exportDatabaseSql(ConnectionConfig config, String schemaName) {
+        // Redis不支持SQL导出
+        if (config.getDatabaseType().equalsIgnoreCase("redis")) {
+            JOptionPane.showMessageDialog(this, "Redis不支持SQL导出功能", "不支持的操作", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("保存SQL文件");
+        fileChooser.setFileFilter(new FileNameExtensionFilter("SQL文件(*.sql)", "sql"));
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+            if (!filePath.toLowerCase().endsWith(".sql")) {
+                filePath += ".sql";
+            }
+
+            // 创建进度对话框
+            JDialog progressDialog = new JDialog(this, "导出进度", true);
+            progressDialog.setLayout(new BorderLayout());
+            JProgressBar progressBar = new JProgressBar(0, 100);
+            progressBar.setStringPainted(true);
+            progressBar.setString("准备导出...");
+            JLabel statusLabel = new JLabel("准备导出数据...");
+            statusLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            JButton cancelButton = new JButton("取消");
+
+            AtomicBoolean cancelled = new AtomicBoolean(false);
+            cancelButton.addActionListener(e -> cancelled.set(true));
+
+            JPanel buttonPanel = new JPanel();
+            buttonPanel.add(cancelButton);
+
+            progressDialog.add(statusLabel, BorderLayout.NORTH);
+            progressDialog.add(progressBar, BorderLayout.CENTER);
+            progressDialog.add(buttonPanel, BorderLayout.SOUTH);
+            progressDialog.setSize(400, 150);
+            progressDialog.setLocationRelativeTo(this);
+
+            // 使用SwingWorker在后台导出SQL
+            String finalFilePath = filePath;
+            SwingWorker<Void, Integer> worker = new SwingWorker<Void, Integer>() {
+                @Override
+                protected Void doInBackground() throws Exception {
+                    try (FileWriter writer = new FileWriter(finalFilePath)) {
+                        // 写入文件头部，包含数据库信息和导出时间
+                        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                        String header = String.format("-- 导出自数据库: %s\n" +
+                                         "-- 数据库类型: %s\n" +
+                                         "-- 模式名称: %s\n" +
+                                         "-- 导出时间: %s\n\n",
+                                config.getName(), config.getDatabaseType(), schemaName, dateFormat.format(new Date()));
+                        writer.write(header);
+                        
+                        // 添加USE语句
+                        writer.write(String.format("USE `%s`;\n\n", schemaName));
+
+                        // 获取当前模式下的所有表
+                        List<String> tables = DatabaseService.getTables(config, schemaName);
+                        int totalTables = tables.size();
+
+                        for (int i = 0; i < tables.size(); i++) {
+                            if (cancelled.get()) {
+                                break;
+                            }
+
+                            String tableName = tables.get(i);
+                            int progress = (i * 100) / totalTables;
+                            publish(progress);
+                            setStatus("正在导出表: " + tableName);
+
+                            // 导出表结构
+                            writer.write("-- 表结构: " + tableName + "\n");
+                            StringBuilder createTableSql = new StringBuilder("CREATE TABLE " + tableName + " (\n");
+                            
+                            // 获取表列信息
+                            List<Map<String, String>> columns = DatabaseService.getColumns(config, schemaName, tableName);
+                            
+                            // 获取主键信息 - 对表名做处理，如果包含schema前缀需要去掉
+                            String tableNameForPk = tableName;
+                            if (tableName.contains(".")) {
+                                String[] parts = tableName.split("\\.");
+                                tableNameForPk = parts[1];
+                            }
+                            List<String> primaryKeys = DatabaseService.getPrimaryKeys(config, tableNameForPk);
+                            
+                            // 去除主键列表中的重复项
+                            primaryKeys = getPrimaryKeys(primaryKeys);
+
+                            // 标记表结构是否已写入文件
+                            boolean tableWritten = false;
+                            
+                            int columnCount = 0;
+                            for (Map<String, String> column : columns) {
+                                if (columnCount > 0) {
+                                    createTableSql.append(",\n");
+                                }
+                                
+                                String columnName = column.get("name");
+                                String typeName = column.get("type");
+                                
+                                if (columnName == null || typeName == null) {
+                                    // 尝试使用不同的key - 可能是大写
+                                    columnName = column.get("COLUMN_NAME");
+                                    typeName = column.get("TYPE_NAME");
+                                }
+                                
+                                if (columnName == null || typeName == null) {
+                                    // 如果仍然为null，使用默认值避免NullPointerException
+                                    columnName = column.get("NAME") != null ? column.get("NAME") : "unknown_column";
+                                    typeName = column.get("TYPE") != null ? column.get("TYPE") : "VARCHAR";
+                                }
+                                
+                                createTableSql.append("  ").append(columnName).append(" ")
+                                           .append(typeName);
+                                
+                                // 添加大小信息（如果有）
+                                String size = column.get("size");
+                                if (size == null) {
+                                    size = column.get("COLUMN_SIZE");
+                                }
+                                if (size == null) {
+                                    size = column.get("SIZE");
+                                }
+                                
+                                if (size != null && !size.isEmpty()) {
+                                    createTableSql.append("(").append(size).append(")");
+                                }
+                                
+                                // NOT NULL 约束
+                                String nullable = column.get("nullable");
+                                if (nullable == null) {
+                                    nullable = column.get("IS_NULLABLE");
+                                }
+                                
+                                if ("NO".equals(nullable)) {
+                                    createTableSql.append(" NOT NULL");
+                                }
+                                
+                                columnCount++;
+                            }
+                            
+                            // 添加主键约束
+                            if (!primaryKeys.isEmpty()) {
+                                createTableSql.append(",\n  PRIMARY KEY (");
+                                
+                                // 去除主键列表中的重复项
+                                Set<String> uniquePrimaryKeysSe = new LinkedHashSet<>(primaryKeys);
+                                List<String> uniquePKList = new ArrayList<>(uniquePrimaryKeysSe);
+                                
+                                for (int p = 0; p < uniquePKList.size(); p++) {
+                                    if (p > 0) {
+                                        createTableSql.append(", ");
+                                    }
+                                    createTableSql.append(uniquePKList.get(p));
+                                }
+                                createTableSql.append(")");
+                            }
+                            
+                            // 添加collate设置（针对MySQL）作为CREATE TABLE的一部分
+                            if ("mysql".equalsIgnoreCase(config.getDatabaseType())) {
+                                // 尝试查询表的字符集和排序规则
+                                try {
+                                    Map<String, Object> collateResult = DatabaseService.executeQuery(
+                                        config, 
+                                        "SELECT TABLE_COLLATION FROM information_schema.TABLES " +
+                                        "WHERE TABLE_SCHEMA = '" + schemaName + "' " +
+                                        "AND TABLE_NAME = '" + tableNameForPk + "'"
+                                    );
+                                    
+                                    if ((boolean) collateResult.get("success")) {
+                                        List<List<Object>> collateData = (List<List<Object>>) collateResult.get("data");
+                                        if (!collateData.isEmpty() && !collateData.get(0).isEmpty() && collateData.get(0).get(0) != null) {
+                                            String collation = collateData.get(0).get(0).toString();
+                                            createTableSql.append("\n) COLLATE = ").append(collation).append(";\n\n");
+                                            writer.write(createTableSql.toString());
+                                            // 设置已写入标志，避免重复写入
+                                            tableWritten = true;
+                                        }
+                                    }
+                                } catch (Exception ex) {
+                                    // 忽略查询字符集错误，不影响整体导出
+                                    System.err.println("获取表字符集失败: " + ex.getMessage());
+                                }
+                            }
+                            
+                            // 如果没有添加collate（非MySQL或查询失败），则正常结束CREATE TABLE语句
+                            if (!tableWritten) {
+                                createTableSql.append("\n);\n\n");
+                                writer.write(createTableSql.toString());
+                            }
+                            
+                            // 导出表数据
+                            writer.write("-- 表数据: " + tableName + "\n");
+                            Map<String, Object> queryResult = DatabaseService.executeQuery(config, "SELECT * FROM " + tableName);
+                            
+                            if ((boolean) queryResult.get("success")) {
+                                List<String> columnNames = (List<String>) queryResult.get("columns");
+                                List<List<Object>> rows = (List<List<Object>>) queryResult.get("data");
+                                
+                                for (List<Object> row : rows) {
+                                    if (cancelled.get()) {
+                                        break;
+                                    }
+
+                                    StringBuilder insertSql = new StringBuilder("INSERT INTO " + tableName + " (");
+                                    StringBuilder values = new StringBuilder("VALUES (");
+
+                                    boolean first = true;
+                                    for (int colIndex = 0; colIndex < columnNames.size(); colIndex++) {
+                                        if (!first) {
+                                            insertSql.append(", ");
+                                            values.append(", ");
+                                        }
+                                        insertSql.append(columnNames.get(colIndex));
+                                        
+                                        Object value = colIndex < row.size() ? row.get(colIndex) : null;
+                                        if (value == null) {
+                                            values.append("NULL");
+                                        } else if (value instanceof String) {
+                                            values.append("'").append(((String) value).replace("'", "''")).append("'");
+                                        } else if (value instanceof Date) {
+                                            values.append("'").append(dateFormat.format(value)).append("'");
+                                        } else {
+                                            values.append(value);
+                                        }
+                                        
+                                        first = false;
+                                    }
+                                    
+                                    insertSql.append(") ");
+                                    values.append(");");
+                                    writer.write(insertSql.toString() + values.toString() + "\n");
+                                }
+                            }
+                            writer.write("\n");
+                        }
+
+                        if (!cancelled.get()) {
+                            publish(100);
+                            setStatus("导出完成");
+                        } else {
+                            setStatus("导出已取消");
+                        }
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        SwingUtilities.invokeLater(() -> {
+                            JOptionPane.showMessageDialog(MainFrame.this, "导出失败: " + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+                        });
+                    }
+                    return null;
+                }
+
+                private List<String> getPrimaryKeys(List<String> primaryKeys) {
+                    Set<String> uniquePrimaryKeysSe = new LinkedHashSet<>(primaryKeys);
+                    primaryKeys = new ArrayList<>(uniquePrimaryKeysSe);
+                    return primaryKeys;
+                }
+
+                private void setStatus(String status) {
+                    SwingUtilities.invokeLater(() -> statusLabel.setText(status));
+                }
+
+                @Override
+                protected void process(List<Integer> chunks) {
+                    int progress = chunks.get(chunks.size() - 1);
+                    progressBar.setValue(progress);
+                    progressBar.setString(progress + "%");
+                }
+
+                @Override
+                protected void done() {
+                    progressDialog.dispose();
+                    if (!cancelled.get()) {
+                        JOptionPane.showMessageDialog(MainFrame.this, "SQL导出成功", "成功", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                }
+            };
+
+            worker.execute();
+            progressDialog.setVisible(true);
+        }
+    }
+
+    /**
+     * 批量执行SQL语句
+     * @param config 数据库连接配置
+     * @param schemaName 模式名称
+     */
+    private void batchExecuteSql(ConnectionConfig config, String schemaName) {
+        // Redis不支持批量执行SQL
+        if (config.getDatabaseType().equalsIgnoreCase("redis")) {
+            JOptionPane.showMessageDialog(this, "Redis不支持批量执行SQL功能", "不支持的操作", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("选择SQL文件");
+        fileChooser.setFileFilter(new FileNameExtensionFilter("SQL文件(*.sql)", "sql"));
+        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+
+            // 创建设置对话框
+            JDialog settingsDialog = new JDialog(this, "执行设置", true);
+            settingsDialog.setLayout(new BorderLayout());
+
+            JPanel settingsPanel = new JPanel(new GridLayout(2, 2, 10, 10));
+            settingsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+            JLabel threadsLabel = new JLabel("线程数:");
+            JSpinner threadsSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 16, 1));
+
+            JLabel batchSizeLabel = new JLabel("批处理大小:");
+            JSpinner batchSizeSpinner = new JSpinner(new SpinnerNumberModel(200, 10, 1000, 10));
+
+            settingsPanel.add(threadsLabel);
+            settingsPanel.add(threadsSpinner);
+            settingsPanel.add(batchSizeLabel);
+            settingsPanel.add(batchSizeSpinner);
+
+            JPanel buttonPanel = new JPanel();
+            JButton executeButton = new JButton("执行");
+            JButton cancelButton = new JButton("取消");
+
+            buttonPanel.add(executeButton);
+            buttonPanel.add(cancelButton);
+
+            settingsDialog.add(settingsPanel, BorderLayout.CENTER);
+            settingsDialog.add(buttonPanel, BorderLayout.SOUTH);
+            settingsDialog.pack();
+            settingsDialog.setLocationRelativeTo(this);
+
+            cancelButton.addActionListener(e -> settingsDialog.dispose());
+            
+            executeButton.addActionListener(e -> {
+                int threads = (int) threadsSpinner.getValue();
+                int batchSize = (int) batchSizeSpinner.getValue();
+                settingsDialog.dispose();
+                
+                // 执行SQL批处理
+                executeSqlBatch(config, schemaName, filePath, threads, batchSize);
+            });
+
+            settingsDialog.setVisible(true);
+        }
+    }
+
+    /**
+     * 执行SQL文件批处理
+     */
+    private void executeSqlBatch(ConnectionConfig config, String schemaName, String filePath, int threads, int batchSize) {
+        // 创建进度对话框
+        JDialog progressDialog = new JDialog(this, "执行进度", true);
+        progressDialog.setLayout(new BorderLayout());
+        
+        JProgressBar progressBar = new JProgressBar(0, 100);
+        progressBar.setStringPainted(true);
+        progressBar.setString("准备执行...");
+        
+        JLabel statusLabel = new JLabel("正在解析SQL文件...");
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        JButton stopButton = new JButton("停止");
+        AtomicBoolean stopped = new AtomicBoolean(false);
+        stopButton.addActionListener(e -> stopped.set(true));
+        
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(stopButton);
+        
+        progressDialog.add(statusLabel, BorderLayout.NORTH);
+        progressDialog.add(progressBar, BorderLayout.CENTER);
+        progressDialog.add(buttonPanel, BorderLayout.SOUTH);
+        progressDialog.setSize(400, 150);
+        progressDialog.setLocationRelativeTo(this);
+        
+        // 使用SwingWorker在后台执行SQL
+        SwingWorker<Void, Object[]> worker = new SwingWorker<Void, Object[]>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                try {
+                    // 读取SQL文件并解析成独立的SQL语句
+                    File file = new File(filePath);
+                    String content = new String(java.nio.file.Files.readAllBytes(file.toPath()));
+                    
+                    // 简单分割SQL语句（以分号结尾）
+                    List<String> sqlStatements = new ArrayList<>();
+                    StringBuilder currentStatement = new StringBuilder();
+                    boolean inString = false;
+                    boolean escaped = false;
+                    
+                    for (char c : content.toCharArray()) {
+                        // 这里增加判断，如果读取行以-- 开头，那么这行就是注释，直接忽略，从下一行开始重新读取
+                        if (c == '\n' && currentStatement.toString().trim().startsWith("--")) {
+                            currentStatement = new StringBuilder();
+                            continue;
+                        }
+
+                        currentStatement.append(c);
+                        
+                        if (c == '\'' && !escaped) {
+                            inString = !inString;
+                        }
+                        
+                        escaped = c == '\\' && !escaped;
+                        
+                        if (c == ';' && !inString) {
+                            String sql = currentStatement.toString().trim();
+                            if (!sql.isEmpty() && !sql.startsWith("--")) {
+                                sqlStatements.add(sql);
+                            }
+                            currentStatement = new StringBuilder();
+                        }
+                    }
+                    
+                    // 如果最后一个语句没有分号
+                    String finalSql = currentStatement.toString().trim();
+                    if (!finalSql.isEmpty() && !finalSql.startsWith("--")) {
+                        sqlStatements.add(finalSql);
+                    }
+                    
+                    // 过滤注释和空语句
+                    sqlStatements = sqlStatements.stream()
+                            .map(String::trim)
+                            .filter(sql -> !sql.isEmpty() && !sql.startsWith("--"))
+                            .collect(java.util.stream.Collectors.toList());
+                    
+                    int totalStatements = sqlStatements.size();
+                    publish(new Object[]{"共找到 " + totalStatements + " 条SQL语句", 0});
+                    
+                    // 分类SQL语句为DDL(CREATE TABLE)和DML(INSERT等其他语句)
+                    List<String> createTableStatements = new ArrayList<>();
+                    List<String> otherStatements = new ArrayList<>();
+                    
+                    // 将SQL语句分为CREATE TABLE和其他语句
+                    for (String sql : sqlStatements) {
+                        // 判断是否是CREATE TABLE语句
+                        if (sql.toUpperCase().contains("CREATE TABLE")) {
+                            createTableStatements.add(sql);
+                        } else {
+                            otherStatements.add(sql);
+                        }
+                    }
+                    
+                    publish(new Object[]{"正在执行表结构创建语句...", 0});
+                    
+                    // 创建线程池执行SQL语句
+                    ExecutorService executor = Executors.newFixedThreadPool(threads);
+                    
+                    // 批量执行
+                    AtomicInteger completedCount = new AtomicInteger(0);
+                    AtomicInteger errorCount = new AtomicInteger(0);
+                    List<Future<?>> futures = new ArrayList<>();
+                    
+                    // 1. 首先执行所有CREATE TABLE语句 - 这些语句顺序执行，不并行
+                    for (String sql : createTableStatements) {
+                        if (stopped.get()) {
+                            break;
+                        }
+                        
+                        try {
+                            // 执行建表语句
+                            Map<String, Object> result = DatabaseService.executeUpdate(config, sql);
+                            boolean success = (boolean) result.get("success");
+                            
+                            if (success) {
+                                int completed = completedCount.incrementAndGet();
+                                int progress = (completed * 100) / totalStatements;
+                                publish(new Object[]{"已执行表结构语句: " + completed + "/" + createTableStatements.size() + 
+                                      ", 错误: " + errorCount.get(), progress});
+                            } else {
+                                errorCount.incrementAndGet();
+                                String errorMessage = (String) result.get("message");
+                                publish(new Object[]{"表结构语句错误: " + errorMessage, -1});
+                            }
+                        } catch (Exception e) {
+                            errorCount.incrementAndGet();
+                            publish(new Object[]{"表结构语句错误: " + e.getMessage(), -1});
+                        }
+                    }
+                    
+                    // 2. 然后执行所有其他语句(如INSERT语句) - 可以并行执行
+                    if (!stopped.get()) {
+                        publish(new Object[]{"正在执行数据插入语句...", completedCount.get() * 100 / totalStatements});
+                        
+                        // 将SQL语句分组为批次
+                        List<List<String>> batches = new ArrayList<>();
+                        for (int i = 0; i < otherStatements.size(); i += batchSize) {
+                            batches.add(otherStatements.subList(i, Math.min(i + batchSize, otherStatements.size())));
+                        }
+                        
+                        for (List<String> batch : batches) {
+                            if (stopped.get()) {
+                                break;
+                            }
+                            
+                            Future<?> future = executor.submit(() -> {
+                                for (String sql : batch) {
+                                    if (stopped.get()) {
+                                        break;
+                                    }
+                                    
+                                    try {
+                                        // 执行非查询语句
+                                        Map<String, Object> result = DatabaseService.executeUpdate(config, sql);
+                                        boolean success = (boolean) result.get("success");
+                                        
+                                        if (success) {
+                                            int completed = completedCount.incrementAndGet();
+                                            int progress = (completed * 100) / totalStatements;
+                                            publish(new Object[]{"已执行: " + completed + "/" + totalStatements + 
+                                                  ", 错误: " + errorCount.get(), progress});
+                                        } else {
+                                            errorCount.incrementAndGet();
+                                            String errorMessage = (String) result.get("message");
+                                            publish(new Object[]{"错误: " + errorMessage, -1});
+                                        }
+                                    } catch (Exception e) {
+                                        errorCount.incrementAndGet();
+                                        publish(new Object[]{"错误: " + e.getMessage(), -1});
+                                    }
+                                }
+                            });
+                            futures.add(future);
+                        }
+                        
+                        // 等待所有任务完成
+                        for (Future<?> future : futures) {
+                            if (!stopped.get()) {
+                                future.get();
+                            }
+                        }
+                    }
+                    
+                    executor.shutdown();
+                    
+                    // 如果未被停止，则设置为100%完成
+                    if (!stopped.get()) {
+                        publish(new Object[]{"执行完成, 总共: " + totalStatements + ", 成功: " + 
+                                (totalStatements - errorCount.get()) + ", 错误: " + errorCount.get(), 100});
+                    } else {
+                        publish(new Object[]{"执行已停止", -1});
+                    }
+                    
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    publish(new Object[]{"执行失败: " + e.getMessage(), -1});
+                }
+                return null;
+            }
+            
+            @Override
+            protected void process(List<Object[]> chunks) {
+                Object[] latestUpdate = chunks.get(chunks.size() - 1);
+                String status = (String) latestUpdate[0];
+                int progress = (int) latestUpdate[1];
+                
+                statusLabel.setText(status);
+                if (progress >= 0) {
+                    progressBar.setValue(progress);
+                    progressBar.setString(progress + "%");
+                }
+            }
+            
+            @Override
+            protected void done() {
+                stopButton.setText("关闭");
+                stopButton.removeActionListener(stopButton.getActionListeners()[0]);
+                stopButton.addActionListener(e -> progressDialog.dispose());
+            }
+        };
+        
+        worker.execute();
+        progressDialog.setVisible(true);
     }
 }

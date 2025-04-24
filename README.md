@@ -98,23 +98,4 @@
 
 该项目采用MIT许可证 - 详见LICENSE文件
 
-## 应用截图
-<img width="944" alt="image" src="https://github.com/user-attachments/assets/d6c2caef-0a19-4f23-992d-ab66d064a884" />
-
-<img width="944" alt="image" src="https://github.com/user-attachments/assets/52079923-49f7-49dd-bb85-a950d0856533" />
-<img width="944" alt="image" src="https://github.com/user-attachments/assets/b178b918-6a6d-4463-8a0c-06aea1d8b029" />
-<img width="944" alt="image" src="https://github.com/user-attachments/assets/acad7b80-7da8-48a2-943e-2fcffb588d7a" />
-<img width="944" alt="image" src="https://github.com/user-attachments/assets/da9fe36a-e510-427a-90af-1abcc0581a87" />
-<img width="944" alt="image" src="https://github.com/user-attachments/assets/a7d478ea-c469-4f23-a5a7-6b7c90205586" />
-<img width="944" alt="image" src="https://github.com/user-attachments/assets/bb45230a-fee0-417f-a087-a4ab3a7101eb" />
-<img width="944" alt="image" src="https://github.com/user-attachments/assets/6d84d57e-9ce4-4035-ba6c-7fe15027712e" />
-<img width="944" alt="image" src="https://github.com/user-attachments/assets/41a33d9d-d689-4072-b63d-a5c4e6e926ec" />
-<img width="948" alt="image" src="https://github.com/user-attachments/assets/eab3ab8d-683a-41ae-bafb-8b757234ee86" />
-<img width="949" alt="image" src="https://github.com/user-attachments/assets/7ecc2837-48a6-4310-985f-a561c95b6557" />
-<img width="944" alt="image" src="https://github.com/user-attachments/assets/b24ecad7-85cc-4fbb-bc97-a39e7d335247" />
-
-
-
-
-
 ![ef29961aed985a8ff3244daf1f254d0](https://github.com/user-attachments/assets/e3ca1238-8aff-4c2f-bae6-174454738f45)

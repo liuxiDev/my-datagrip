@@ -1132,17 +1132,68 @@ public class DatabaseService {
                     table = parts[1];
                 }
                 
-                String sql = "SHOW KEYS FROM " + tableName + " WHERE Key_name = 'PRIMARY'";
+                // 对于MySQL, 使用一个更可靠的查询方式
+                String sql;
+                if (schema != null) {
+                    sql = "SELECT k.COLUMN_NAME FROM information_schema.table_constraints t "
+                        + "JOIN information_schema.key_column_usage k "
+                        + "ON k.constraint_name = t.constraint_name "
+                        + "WHERE k.table_schema = '" + schema + "' "
+                        + "AND k.table_name = '" + table + "' "
+                        + "AND t.constraint_type = 'PRIMARY KEY' "
+                        + "ORDER BY k.ordinal_position";
+                } else {
+                    sql = "SELECT k.COLUMN_NAME FROM information_schema.table_constraints t "
+                        + "JOIN information_schema.key_column_usage k "
+                        + "ON k.constraint_name = t.constraint_name "
+                        + "WHERE k.table_name = '" + table + "' "
+                        + "AND t.constraint_type = 'PRIMARY KEY' "
+                        + "ORDER BY k.ordinal_position";
+                }
+                
                 Map<String, Object> result = executeQuery(config, sql);
                 
                 if ((boolean) result.get("success")) {
                     List<List<Object>> data = (List<List<Object>>) result.get("data");
-                    List<String> columns = (List<String>) result.get("columns");
                     
-                    int columnNameIndex = columns.indexOf("Column_name");
-                    if (columnNameIndex >= 0) {
+                    // 如果使用information_schema查询没有结果，尝试使用SHOW KEYS
+                    if (data.isEmpty()) {
+                        sql = "SHOW KEYS FROM " + tableName + " WHERE Key_name = 'PRIMARY'";
+                        result = executeQuery(config, sql);
+                        
+                        if ((boolean) result.get("success")) {
+                            data = (List<List<Object>>) result.get("data");
+                            List<String> columns = (List<String>) result.get("columns");
+                            
+                            // 尝试找到Column_name列的索引
+                            int columnNameIndex = -1;
+                            for (int i = 0; i < columns.size(); i++) {
+                                if ("Column_name".equalsIgnoreCase(columns.get(i)) ||
+                                    "COLUMN_NAME".equalsIgnoreCase(columns.get(i))) {
+                                    columnNameIndex = i;
+                                    break;
+                                }
+                            }
+                            
+                            // 如果找不到Column_name列，MySQL的SHOW KEYS命令中该列通常在索引4
+                            if (columnNameIndex < 0 && !data.isEmpty() && data.get(0).size() > 4) {
+                                columnNameIndex = 4;  // MySQL中Column_name通常是第5列(索引4)
+                            }
+                            
+                            if (columnNameIndex >= 0) {
+                                for (List<Object> row : data) {
+                                    if (row.size() > columnNameIndex && row.get(columnNameIndex) != null) {
+                                        primaryKeys.add(row.get(columnNameIndex).toString());
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // 使用information_schema查询有结果
                         for (List<Object> row : data) {
-                            primaryKeys.add(row.get(columnNameIndex).toString());
+                            if (!row.isEmpty() && row.get(0) != null) {
+                                primaryKeys.add(row.get(0).toString());
+                            }
                         }
                     }
                 }
@@ -1167,7 +1218,7 @@ public class DatabaseService {
                 if ((boolean) result.get("success")) {
                     List<List<Object>> data = (List<List<Object>>) result.get("data");
                     for (List<Object> row : data) {
-                        if (!row.isEmpty()) {
+                        if (!row.isEmpty() && row.get(0) != null) {
                             primaryKeys.add(row.get(0).toString());
                         }
                     }

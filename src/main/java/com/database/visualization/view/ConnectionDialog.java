@@ -38,6 +38,7 @@ public class ConnectionDialog extends JDialog {
         DEFAULT_PORTS.put("postgresql", 5432);
         DEFAULT_PORTS.put("oracle", 1521);
         DEFAULT_PORTS.put("sqlserver", 1433);
+        DEFAULT_PORTS.put("redis", 6379);
         DEFAULT_PORTS.put("sqlite", 0); // SQLite不需要端口
     }
     
@@ -238,14 +239,19 @@ public class ConnectionDialog extends JDialog {
             if (hostField.getText().isEmpty()) {
                 hostField.setText("localhost");
             }
+            if (usernameField.getText().isEmpty()) {
+                usernameField.setText("root");
+            }
             
-            if (portField.getText().isEmpty() && DEFAULT_PORTS.containsKey(type.toLowerCase())) {
+            if (DEFAULT_PORTS.containsKey(type.toLowerCase())) {
                 portField.setText(String.valueOf(DEFAULT_PORTS.get(type.toLowerCase())));
             }
         }
         
         if (isSQLite) {
             databaseField.setText(System.getProperty("user.home") + "/database.db");
+        }else{
+            databaseField.setText("");
         }
         
         updateConnectionConfig();

@@ -2,6 +2,8 @@ package com.database.visualization.model;
 
 import java.io.Serializable;
 import java.util.UUID;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * 数据库连接配置
@@ -30,7 +32,7 @@ public class ConnectionConfig implements Serializable {
         this.port = port;
         this.database = database;
         this.username = username;
-        this.password = password;
+        setPassword(password); // 使用setter确保密码被加密
         generateUrl();
     }
     
@@ -126,19 +128,46 @@ public class ConnectionConfig implements Serializable {
         this.username = username;
     }
 
+    // 这个方法用于Jackson的序列化，确保存储的是加密密码
+    @JsonProperty("password")
+    private String getEncryptedPassword() {
+        return password;
+    }
+    
+    // 这个方法用于Jackson的反序列化，确保读取时直接保存加密密码
+    @JsonProperty("password")
+    private void setEncryptedPassword(String encryptedPassword) {
+        this.password = encryptedPassword;
+    }
+
+    // 这个方法用于应用程序获取解密后的密码
+    @JsonIgnore
     public String getPassword() {
-        // 如果密码已加密，则解密
-        if (password != null && com.database.visualization.utils.SecurityUtil.isEncrypted(password)) {
-            return com.database.visualization.utils.SecurityUtil.decrypt(password);
+        // 检查并迁移旧版加密密码
+        if (password != null && !password.isEmpty()) {
+            try {
+                // 尝试迁移旧版加密密码
+                String migratedPassword = com.database.visualization.utils.SecurityManager.migratePasswordIfNeeded(password);
+                if (!migratedPassword.equals(password)) {
+                    // 如果密码被迁移，更新存储的密码
+                    this.password = migratedPassword;
+                }
+                return com.database.visualization.utils.SecurityManager.decryptPassword(migratedPassword);
+            } catch (Exception e) {
+                // 如果迁移或解密过程出错，返回原始密码
+                System.err.println("密码处理失败，使用原始密码: " + e.getMessage());
+                return password;
+            }
         }
         return password;
     }
 
+    // 这个方法用于应用程序设置密码，确保加密
+    @JsonIgnore
     public void setPassword(String password) {
-        // 如果密码非空且未加密，则加密
-        if (password != null && !password.isEmpty() && 
-                !com.database.visualization.utils.SecurityUtil.isEncrypted(password)) {
-            this.password = com.database.visualization.utils.SecurityUtil.encrypt(password);
+        // 使用SecurityManager加密密码
+        if (password != null && !password.isEmpty()) {
+            this.password = com.database.visualization.utils.SecurityManager.encryptPassword(password);
         } else {
             this.password = password;
         }
